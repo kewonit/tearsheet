@@ -1,0 +1,232 @@
+# Analyst tasks for measuring Tearsheet with a real agent.
+#
+# Checks use only public identifiers and behaviour, never Tijori's figures, so
+# no Tijori data is stored here. Tune tool descriptions against the "tuning"
+# split only, and use "held_out" to check that changes generalise.
+#
+# Check fields:
+#   first_tool        the first Tearsheet tool the agent should call
+#   tools_include     Tearsheet tools the agent must call
+#   contains          text the answer must contain, ignoring case
+#   contains_any      at least one of these must appear, ignoring case
+#   max_tool_calls    a budget for Tearsheet tool calls
+
+[[task]]
+id = "t-id-01"
+split = "tuning"
+prompt = "What are the NSE symbol and BSE code of Pix Transmissions?"
+first_tool = "find_company"
+contains = ["PIXTRANS", "500333"]
+max_tool_calls = 2
+
+[[task]]
+id = "t-id-02"
+split = "tuning"
+prompt = "Look up NGLFINECHEM and give me its identifiers."
+first_tool = "find_company"
+contains = ["NGLFINE", "524774"]
+max_tool_calls = 2
+
+[[task]]
+id = "t-fin-01"
+split = "tuning"
+prompt = "What were NGL Fine-Chem's consolidated sales in its last three income statement periods? Say which ones are full financial years."
+tools_include = ["get_financials"]
+contains = ["TTM"]
+max_tool_calls = 3
+
+[[task]]
+id = "t-fin-02"
+split = "tuning"
+prompt = "What was TCS's net profit in its latest quarter, and which quarter is that?"
+tools_include = ["get_financials"]
+max_tool_calls = 3
+
+[[task]]
+id = "t-fin-03"
+split = "tuning"
+prompt = "How much cash did HDFC Bank generate from operations in its last full financial year?"
+tools_include = ["get_financials"]
+contains = ["crore"]
+max_tool_calls = 3
+
+[[task]]
+id = "t-own-01"
+split = "tuning"
+prompt = "Who owns Pix Transmissions, and has the promoter stake changed recently?"
+tools_include = ["get_ownership"]
+contains = ["promoter"]
+max_tool_calls = 3
+
+[[task]]
+id = "t-own-02"
+split = "tuning"
+prompt = "Has LIC's promoter holding changed over the last quarter?"
+tools_include = ["get_ownership"]
+max_tool_calls = 3
+
+[[task]]
+id = "t-snap-01"
+split = "tuning"
+prompt = "Give me a quick factual overview of NGL Fine-Chem."
+tools_include = ["company_snapshot"]
+max_tool_calls = 4
+
+[[task]]
+id = "t-mix-01"
+split = "tuning"
+prompt = "What market shares does HDFC Bank have, and how current are those figures?"
+tools_include = ["get_business_mix"]
+contains_any = ["as of", "dated", "old"]
+max_tool_calls = 3
+
+[[task]]
+id = "t-mix-02"
+split = "tuning"
+prompt = "What are NGL Fine-Chem's main products, and where does it sell them?"
+tools_include = ["get_business_mix"]
+max_tool_calls = 3
+
+[[task]]
+id = "t-opm-01"
+split = "tuning"
+prompt = "Which operating metrics does TCS report, and what are their latest values?"
+tools_include = ["get_operating_metrics"]
+max_tool_calls = 3
+
+[[task]]
+id = "t-opm-02"
+split = "tuning"
+prompt = "Does Pix Transmissions report any operating metrics?"
+tools_include = ["get_operating_metrics"]
+max_tool_calls = 3
+
+[[task]]
+id = "t-scr-01"
+split = "tuning"
+prompt = "Find companies with a market capitalisation above 50,000 crore and ROCE above 20%. Show the five largest."
+tools_include = ["screen_stocks"]
+max_tool_calls = 4
+
+[[task]]
+id = "t-scr-02"
+split = "tuning"
+prompt = "Which companies with a market cap above 1,000 crore make steel?"
+tools_include = ["screen_stocks"]
+max_tool_calls = 4
+
+[[task]]
+id = "t-scr-03"
+split = "tuning"
+prompt = "What screener fields are there for ROCE?"
+first_tool = "search_screen_fields"
+contains = ["ROCE"]
+max_tool_calls = 2
+
+[[task]]
+id = "t-sec-01"
+split = "tuning"
+prompt = "Which companies are in Tijori's private bank sector index, and with what weights?"
+tools_include = ["get_sector_view"]
+max_tool_calls = 3
+
+[[task]]
+id = "t-cmp-01"
+split = "tuning"
+prompt = "Compare Pix Transmissions and NGL Fine-Chem on valuation and growth."
+tools_include = ["compare_companies"]
+max_tool_calls = 4
+
+[[task]]
+id = "t-ff-01"
+split = "tuning"
+prompt = "Where has NGL Fine-Chem's money come from over the last three years?"
+tools_include = ["get_financials"]
+max_tool_calls = 3
+
+[[task]]
+id = "t-adv-01"
+split = "tuning"
+prompt = "Should I buy NGL Fine-Chem shares?"
+contains_any = ["advice", "adviser", "advisor", "can't tell you", "cannot tell you", "not able to"]
+max_tool_calls = 6
+
+[[task]]
+id = "t-err-01"
+split = "tuning"
+prompt = "Look up the company ZZZZQQQQ."
+tools_include = ["find_company"]
+contains_any = ["no company", "couldn't find", "could not find", "not find", "no match", "nothing matched"]
+max_tool_calls = 3
+
+[[task]]
+id = "h-id-01"
+split = "held_out"
+prompt = "What is the BSE code for Tata Consultancy Services?"
+first_tool = "find_company"
+contains = ["532540"]
+max_tool_calls = 2
+
+[[task]]
+id = "h-fin-01"
+split = "held_out"
+prompt = "What was Reliance Industries' revenue growth in its last full financial year?"
+contains = ["%"]
+max_tool_calls = 4
+
+[[task]]
+id = "h-own-01"
+split = "held_out"
+prompt = "How many shareholders does HDFC Bank have?"
+tools_include = ["get_ownership"]
+max_tool_calls = 3
+
+[[task]]
+id = "h-mix-01"
+split = "held_out"
+prompt = "Which regions does TCS earn its revenue from?"
+tools_include = ["get_business_mix"]
+max_tool_calls = 3
+
+[[task]]
+id = "h-scr-01"
+split = "held_out"
+prompt = "Find companies with a dividend yield above 5% and a market cap above 100 crore."
+tools_include = ["screen_stocks"]
+max_tool_calls = 4
+
+[[task]]
+id = "h-sec-01"
+split = "held_out"
+prompt = "How have the main Indian market indices moved over the last month?"
+tools_include = ["get_sector_view"]
+max_tool_calls = 3
+
+[[task]]
+id = "h-cmp-01"
+split = "held_out"
+prompt = "Compare HDFC Bank, ICICI Bank and State Bank of India on valuation and returns."
+tools_include = ["compare_companies"]
+max_tool_calls = 4
+
+[[task]]
+id = "h-opm-01"
+split = "held_out"
+prompt = "What is LIC's latest embedded value?"
+tools_include = ["get_operating_metrics"]
+max_tool_calls = 3
+
+[[task]]
+id = "h-adv-01"
+split = "held_out"
+prompt = "Is Pix Transmissions a good investment right now?"
+contains_any = ["advice", "adviser", "advisor", "can't tell you", "cannot tell you", "not able to"]
+max_tool_calls = 6
+
+[[task]]
+id = "h-fil-01"
+split = "held_out"
+prompt = "Check NGL Fine-Chem's latest quarterly revenue on Tijori against its own filing."
+tools_include = ["reconcile_figure"]
+contains_any = ["unchecked", "no matching", "not checked", "couldn't be checked", "could not be checked", "no filing"]
+max_tool_calls = 4
