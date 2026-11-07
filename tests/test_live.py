@@ -226,6 +226,22 @@ def test_an_anonymous_session_has_no_paid_features(cache, tmp_path):
     assert (entitlements.revenue_mix_history, entitlements.market_share_history) == (False, False)
 
 
+def test_fund_flow_parts_add_up_to_their_totals(cache, tmp_path):
+    from tearsheet.tools.financials import _fund_flow
+
+    async def work(client):
+        match = await find_one(client, cache, "NGLFINE")
+        return await _fund_flow(client, cache, match.company.slug, 5)
+
+    statement = run(work, tmp_path)[0].statement
+    for group in ("Sources of funds", "Uses of funds"):
+        rows = [r for r in statement.rows if r.group == group]
+        total = next(r for r in rows if r.name.startswith("Total"))
+        for index in range(len(statement.periods)):
+            parts = sum(r.values[index] or 0 for r in rows if r is not total)
+            assert parts == pytest.approx(total.values[index], abs=0.1)
+
+
 def test_sector_weights_add_up_to_one_hundred_percent(tmp_path):
     from tearsheet.sources.tijori.markets import load_constituents, parse_markets
 

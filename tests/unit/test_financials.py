@@ -5,7 +5,12 @@ import json
 import pytest
 
 from tearsheet.core.errors import ErrorCode, TearsheetError
-from tearsheet.sources.tijori.financials import build_statement, parse_tables, unit_for
+from tearsheet.sources.tijori.financials import (
+    build_statement,
+    parse_fund_flow,
+    parse_tables,
+    unit_for,
+)
 
 
 def row(name, values, children=()):
@@ -280,3 +285,23 @@ def test_units_come_from_the_row_name(name, statement, unit):
 def test_the_output_serialises_cleanly():
     parsed = build_statement(income(WITH_TTM), statement="income")
     assert json.loads(parsed.statement.model_dump_json())["periods"][-1] == "TTM Jun 2025"
+
+
+def test_fund_flow_keeps_windows_groups_and_an_unknown_basis():
+    body = {
+        "data": [
+            {
+                "name": "sources",
+                "data": {"1yr": [{"name": "Loans", "y": 5}], "3yr": [{"name": "Loans", "y": 9}]},
+            },
+            {"name": "uses", "data": {"1yr": [{"name": "Capex", "y": 4}]}},
+        ]
+    }
+    parsed = parse_fund_flow(body, periods=5)
+    assert parsed.statement.periods == ["Last 1 year", "Last 3 years"]
+    assert parsed.statement.basis is None
+    assert [(r.group, r.name, r.values) for r in parsed.statement.rows] == [
+        ("Sources of funds", "Loans", [5.0, 9.0]),
+        ("Uses of funds", "Capex", [4.0, None]),
+    ]
+    assert "consolidated or standalone" in parsed.warnings[0]

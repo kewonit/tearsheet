@@ -18,6 +18,7 @@ from tearsheet.sources.tijori.financials import (
     FinancialStatement,
     Statement,
     build_statement,
+    parse_fund_flow,
     parse_tables,
 )
 from tearsheet.tools.companies import CompanyQuery, entity_for
@@ -42,6 +43,22 @@ async def load_tables(
     return tables, datetime.fromtimestamp(cache.get("financials", slug).fetched_at, UTC)
 
 
+async def _fund_flow(
+    client: TijoriClient, cache: Cache, slug: str, periods: int
+) -> tuple[Any, datetime]:
+    from tearsheet.tools.company import load_company
+
+    entry = cache.get("fund_flow", slug)
+    if entry is None:
+        data, _ = await load_company(client, cache, slug)
+        if data.page.company_id is None:
+            raise TearsheetError(ErrorCode.UPSTREAM_CHANGED, "Tijori's page has no company id.")
+        response = await client.get(f"/api/v1/ind/fund_flow_analysis_data/{data.page.company_id}/")
+        cache.put("fund_flow", slug, response.json(), ttl_s=FINANCIALS_TTL_S)
+        entry = cache.get("fund_flow", slug)
+    return parse_fund_flow(entry.value, periods), datetime.fromtimestamp(entry.fetched_at, UTC)
+
+
 def register(server: MCPServer, *, client: TijoriClient, cache: Cache, read_only: Any) -> None:
     tool: Callable = server.tool(annotations=read_only)
 
@@ -55,21 +72,26 @@ def register(server: MCPServer, *, client: TijoriClient, cache: Cache, read_only
     ) -> Envelope[FinancialStatement]:
         """Get a company's financial statement.
 
-        Use for income statements, balance sheets, cash flow, quarterly results and
-        ratios. Accepts an NSE symbol, BSE code or name. Every row states its own
-        unit, because statements mix crore, percent, days and multiples. A unit of
-        as_reported means the unit isn't known, so don't assume one. A period
-        starting TTM is trailing twelve months, and one starting Interim covers an
-        unstated period, so don't compare either directly with annual columns. A
-        blank value means no reliable figure exists. If the requested basis doesn't
-        exist, the other is returned with a warning. Set detail to full for line
-        items. Figures are as Tijori reports them and are unchecked against filings.
+        Covers income statements, balance sheets, cash flow, quarterly results,
+        ratios, and fund flow, which shows where money came from and went over
+        trailing windows of 1 to 10 years. Accepts an NSE symbol, BSE code or
+        name. Every row states its own unit, because statements mix crore,
+        percent, days and multiples. A unit of as_reported means the unit isn't
+        known, so don't assume one. A period starting TTM is trailing twelve
+        months, and one starting Interim covers an unstated period, so don't
+        compare either directly with annual columns. A blank value means no
+        reliable figure exists. If the requested basis doesn't exist, the other
+        is returned with a warning. Set detail to full for line items. Figures
+        are as Tijori reports them and are unchecked against filings.
         """
         match = await find_one(client, cache, company)
-        tables, fetched_at = await load_tables(client, cache, match.company.slug)
-        parsed = build_statement(
-            tables, statement=statement, basis=basis, detail=detail, periods=periods
-        )
+        if statement == "fund_flow":
+            parsed, fetched_at = await _fund_flow(client, cache, match.company.slug, periods)
+        else:
+            tables, fetched_at = await load_tables(client, cache, match.company.slug)
+            parsed = build_statement(
+                tables, statement=statement, basis=basis, detail=detail, periods=periods
+            )
         url = f"{BASE_URL}/company/{match.company.slug}/financials/"
         return to_result(
             Envelope[FinancialStatement](

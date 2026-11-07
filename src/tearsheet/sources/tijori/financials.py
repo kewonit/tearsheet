@@ -25,7 +25,7 @@ from pydantic import BaseModel
 
 from tearsheet.core.errors import ErrorCode, TearsheetError
 
-Statement = Literal["income", "balance_sheet", "cash_flow", "quarterly", "ratios"]
+Statement = Literal["income", "balance_sheet", "cash_flow", "quarterly", "ratios", "fund_flow"]
 Basis = Literal["consolidated", "standalone"]
 Detail = Literal["concise", "full"]
 
@@ -76,7 +76,7 @@ class FinancialRow(BaseModel):
 
 class FinancialStatement(BaseModel):
     statement: Statement
-    basis: Basis
+    basis: Basis | None
     periods: list[str]
     rows: list[FinancialRow]
 
@@ -268,6 +268,8 @@ def build_statement(
 ) -> ParsedStatement:
     """Turn embedded tables into a statement with labelled periods and units."""
     warnings = []
+    if statement == "fund_flow":
+        raise ValueError("fund flow comes from its own endpoint; use parse_fund_flow")
     table = tables.get(_table_key(statement, basis, detail))
     if not _has_figures(table):
         other: Basis = "standalone" if basis == "consolidated" else "consolidated"
@@ -320,4 +322,55 @@ def build_statement(
         FinancialStatement(statement=statement, basis=basis, periods=labels, rows=rows),
         _month_end(_parse_month(dates[-1])),
         warnings,
+    )
+
+
+FUND_FLOW_WINDOWS = {
+    "1yr": "Last 1 year",
+    "3yr": "Last 3 years",
+    "5yr": "Last 5 years",
+    "7yr": "Last 7 years",
+    "10yr": "Last 10 years",
+}
+_FUND_FLOW_GROUPS = {"sources": "Sources of funds", "uses": "Uses of funds"}
+
+
+def parse_fund_flow(body: Any, periods: int) -> ParsedStatement:
+    """Where a company's money came from and went, over trailing windows.
+
+    Tijori doesn't say whether these figures are consolidated or standalone,
+    so the basis is left blank rather than guessed.
+    """
+    parts = body.get("data") if isinstance(body, dict) else None
+    if not isinstance(parts, list) or not parts:
+        raise TearsheetError(ErrorCode.UPSTREAM_CHANGED, "Tijori's fund flow data changed shape.")
+    windows = [w for w in FUND_FLOW_WINDOWS if any(w in (p.get("data") or {}) for p in parts)][
+        :periods
+    ]
+    rows = []
+    for part in parts:
+        group = _FUND_FLOW_GROUPS.get(str(part.get("name")).lower(), str(part.get("name")))
+        series = part.get("data") or {}
+        names: list[str] = []
+        for window in windows:
+            for item in series.get(window) or []:
+                if item.get("name") not in names:
+                    names.append(item.get("name"))
+        for name in names:
+            values = []
+            for window in windows:
+                match = next((i for i in series.get(window) or [] if i.get("name") == name), None)
+                values.append(_number(match.get("y")) if match else None)
+            rows.append(FinancialRow(name=str(name), group=group, unit="crore", values=values))
+    if not rows:
+        raise TearsheetError(ErrorCode.NOT_FOUND, "Tijori has no fund flow data for this company.")
+    return ParsedStatement(
+        FinancialStatement(
+            statement="fund_flow",
+            basis=None,
+            periods=[FUND_FLOW_WINDOWS[w] for w in windows],
+            rows=rows,
+        ),
+        None,
+        ["Tijori doesn't say whether fund flow is consolidated or standalone."],
     )
