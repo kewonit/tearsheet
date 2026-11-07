@@ -1,0 +1,34 @@
+name: Bug report
+description: Something Tearsheet does wrong
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please don't paste session files, cookies, or large amounts of Tijori data. Describe the shape of the problem instead.
+  - type: input
+    id: tool
+    attributes:
+      label: Tool
+      description: Which tool, and with which arguments?
+      placeholder: get_financials with company="TCS", statement="quarterly"
+    validations:
+      required: true
+  - type: textarea
+    id: happened
+    attributes:
+      label: What happened
+      description: The error, or what was wrong in the result.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `uv run tearsheet --version`

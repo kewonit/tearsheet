@@ -14,4 +14,6 @@ Please use GitHub's [private vulnerability reporting](https://github.com/kewonit
 
 ## Filings and prompt injection
 
-Filings and other documents are written by third parties and could contain text aimed at manipulating an AI agent. Treat them as source material, not instructions. Tearsheet's tools only read data, but your agent may have other tools connected.
+Filings, and the key events on company pages, are written by third parties and could contain text aimed at manipulating an AI agent. Tearsheet labels them as source material, but treat them as data, not instructions. Tearsheet's tools only read, but your agent may have other tools connected.
+
+The filing tools can only read files inside your filings folder. Paths outside it, including through symlinks, are refused.

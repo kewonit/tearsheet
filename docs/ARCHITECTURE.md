@@ -1,16 +1,17 @@
 # Architecture
 
-Tearsheet is a Python MCP server that runs on your machine over stdio. Parts marked *planned* don't exist yet.
+Tearsheet is a Python MCP server that runs on your machine over stdio.
 
 ```
 src/tearsheet/
-  server.py           Tool registration
+  server.py           Tool and prompt registration
   cli.py              The tearsheet command
   login.py            Browser sign-in
+  prompts.py          Research workflows
   core/               Envelope, errors, units, cache, rate limiter, session, paths
-  sources/tijori/     Browser client, screener, company index, financials
-  sources/filings/    Planned: local folder index, XBRL reader, PDF text
-  analytics/          Planned: ratios and reconciliation
+  analytics/          Growth, CAGR and peer statistics
+  sources/tijori/     Browser client, page parsers, screener, company index
+  sources/filings/    Local filings: safe file access, XBRL and PDF readers
   tools/              One module per tool family
 ```
 
@@ -49,28 +50,17 @@ Finding nothing isn't an error. It's a normal result with a note, because errors
 
 Tearsheet targets MCP revision 2026-07-28 and also serves 2025-11-25 clients. `tests/test_protocol.py` checks both by driving the real server process. stdout is reserved for protocol messages, so diagnostics go to stderr.
 
-## Planned tools
+## Tools
 
-There will be 14 tools. Each accepts a company name, NSE symbol or BSE code, so agents don't have to chain IDs between calls.
+There are 14 tools, listed in the [README](../README.md#tools). Each accepts a company name, NSE symbol or BSE code, so agents don't chain IDs between calls. Tools register in a fixed order, which helps clients cache the list.
 
-| Tool | Purpose | Status |
-|---|---|---|
-| `server_status` | Session, cache and filings health | Done |
-| `find_company` | Resolve a company to all its identifiers | Done |
-| `company_snapshot` | One-call overview of a company | Planned |
-| `get_financials` | Statements with labelled periods and units | Done |
-| `get_operating_metrics` | Company-specific KPIs over time | Planned |
-| `get_business_mix` | Revenue mix, market share and raw materials | Planned |
-| `get_ownership` | Shareholding and fund flow trends | Planned |
-| `screen_stocks` | Screens with validated fields and paging | Planned |
-| `search_screen_fields` | Search the screener's field catalogue | Planned |
-| `compare_companies` | Peer table computed on the server | Planned |
-| `get_sector_view` | Sector, constituents and drivers | Planned |
-| `search_filings` | Search your local filings | Planned |
-| `read_filing` | Read page ranges from a local filing | Planned |
-| `reconcile_figure` | Compare a figure with your filing | Planned |
+## Paid features
 
-Three prompts are planned too: `earnings_review`, `peer_comparison` and `thesis_check`.
+Company pages state the session's plan and which features it unlocks. Tearsheet reads that, and anything unclear counts as locked. Without a paid plan it keeps only the latest value of operating metrics, never requests revenue mix history, and refuses premium presets. Tijori's own page scripts do the same, and its API is more generous than its pages, so the pages are the rule Tearsheet follows.
+
+## Filings
+
+Filings are files the user downloads. Paths an agent supplies are resolved inside the filings folder and refused otherwise, including through symlinks. XML is parsed with defusedxml. XBRL elements are matched by local name, a quarter is chosen by its three-month context, and dimensioned breakdowns are never taken as totals. This part is experimental until it has been tested on real filings.
 
 ## How Tijori behaves
 

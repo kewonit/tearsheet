@@ -30,7 +30,8 @@ These apply to all code in this project.
 4. **No automated exchange access.** See above.
 5. **Be polite.** By default, about one request a second and at most two at a time.
 6. **Respect licensing limits.** Tijori can only show changes in commodity prices, so Tearsheet doesn't try to work out the prices.
-7. **No advice.** Facts and calculations only, with no buy or sell calls and no order placement.
-8. **Keep credentials private.** Sessions are stored owner-only, outside the repository, and cookie values are never logged or returned.
+7. **No advice.** Facts and calculations only, with no buy or sell calls and no order placement. Tijori's own opinions, forecasts and red or green flags are left out too.
+8. **Respect plan limits.** Tearsheet returns only what your Tijori plan shows on the page. Tijori's API returns some data, such as metric history, even to free users whose pages lock it. Tearsheet neither requests nor stores that data unless your session's plan unlocks it.
+9. **Keep credentials private.** Sessions are stored owner-only, outside the repository, and cookie values are never logged or returned.
 
 If an owner of this data objects to how Tearsheet works, please [open an issue](https://github.com/kewonit/tearsheet/issues).

@@ -1,30 +1,19 @@
 # Roadmap
 
-## Done
+## Done in 0.1.0
 
-- Response envelope, error types and unit conversion
-- Rate limiter and persistent local cache
-- Session storage and browser sign-in, tested against a local page
-- MCP server with `server_status`, tested on current and 2025 protocol revisions
-- CI
-- Checked which Tijori pages and data work on a paid account, and that requests need a browser. See [How Tijori behaves](ARCHITECTURE.md#how-tijori-behaves)
-- Browser client, guarded screener and a company index
-- `find_company` and `get_financials`, checked against figures on Tijori's own pages
+- 14 tools and 3 prompts. The 11 Tijori tools are tested against the live site, with accounting identities checked on real data
+- Browser client, guarded screener, company index and plan-aware access to paid data
+- Experimental filings layer, tested on made-up filings
+- Evaluation harness with tuning and held-out tasks
 
-## Next: finish proving Tijori access
+## Next
 
-- [ ] Run `tearsheet login` against the real site and confirm the session cookie is what we expect
-- [ ] Confirm a saved session works from a headless browser
-
-## Then
-
-**Tijori tools.** The remaining data tools, starting with `screen_stocks` and `company_snapshot`. Each upstream response is validated, so site changes fail loudly instead of returning bad data.
-
-**Filings.** Index a local folder and read XBRL results (Regulation 33) and shareholding (Regulation 31) with a small in-house reader, tested on real filings. Add `search_filings`, `read_filing` and `reconcile_figure`, then turn on the `verification` field.
-
-**Analytics.** A ratio library, `compare_companies`, the three prompts, and `as_of` queries for filings-based figures that avoid look-ahead bias.
-
-**Evaluation.** About 30 analyst tasks with a held-out set, measuring correct answers, tool calls, tokens and errors. Tearsheet should match [tijori-finance-mcp](https://github.com/LaZZy0v0/tijori-finance-mcp) on accuracy and use clearly fewer calls and tokens.
+- [ ] Run `tearsheet login` against Tijori's real sign-in, and check what a paid plan unlocks
+- [ ] Test the filing tools on real filings downloaded by hand, and confirm the XBRL element names they rely on
+- [ ] Run the full evaluation, and compare against [tijori-finance-mcp](https://github.com/LaZZy0v0/tijori-finance-mcp) once it can be run with a login
+- [ ] Revisit the held-out filing task, whose check only accepts one of several correct routes
+- [ ] Publish to PyPI and an MCP registry
 
 ## Out of scope
 

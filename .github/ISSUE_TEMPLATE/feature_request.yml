@@ -1,0 +1,18 @@
+name: Feature request
+description: Something Tearsheet should do
+labels: [enhancement]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What you're trying to find out
+      description: The research question, rather than a specific implementation.
+    validations:
+      required: true
+  - type: checkboxes
+    id: rules
+    attributes:
+      label: Data use
+      options:
+        - label: This doesn't need automated access to NSE or BSE, data my Tijori plan doesn't show, or investment advice.
+          required: true
