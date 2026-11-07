@@ -12,7 +12,6 @@ from mcp.server.mcpserver.exceptions import ToolError
 
 
 class ErrorCode(StrEnum):
-    NOT_SIGNED_IN = "NOT_SIGNED_IN"
     SESSION_EXPIRED = "SESSION_EXPIRED"
     BLOCKED = "BLOCKED"
     RATE_LIMITED = "RATE_LIMITED"

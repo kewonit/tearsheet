@@ -5,7 +5,6 @@ from tearsheet.core.cache import Cache
 from tearsheet.core.session import SessionState, read_session_info
 from tearsheet.sources.tijori.client import TijoriClient
 
-PLAN_TTL_S = 3600
 # Only company pages state the plan. This one is stable and always present.
 REFERENCE_SLUG = "tata-consultancy-services-limited"
 
