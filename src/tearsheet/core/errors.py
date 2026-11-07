@@ -20,6 +20,7 @@ class ErrorCode(StrEnum):
     UPSTREAM_CHANGED = "UPSTREAM_CHANGED"
     INVALID_INPUT = "INVALID_INPUT"
     NOT_FOUND = "NOT_FOUND"
+    SETUP_REQUIRED = "SETUP_REQUIRED"
 
 
 # BLOCKED is deliberately not retryable: Tearsheet stops rather than working

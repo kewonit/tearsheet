@@ -46,8 +46,11 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-m 'not browser'"
-markers = ["browser: needs Playwright's Chromium, run with: pytest -m browser"]
+addopts = "-m 'not browser and not live'"
+markers = [
+    "browser: needs Playwright's Chromium, run with: pytest -m browser",
+    "live: contacts Tijori, so never runs in CI, run with: pytest -m live",
+]
 
 [tool.ruff]
 line-length = 100
