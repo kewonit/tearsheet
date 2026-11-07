@@ -88,10 +88,16 @@ Tested on 8 November 2026 with a signed-in paid account. [tijori-finance-mcp](ht
 
 - The last income column can be trailing twelve months under a plain date. It's labelled `TTM` when it breaks the yearly pattern.
 - That column can lag the latest quarterly results, which gets a warning.
+- A final cash flow column off the year end looks like about twelve months, but Tijori doesn't say what it covers, so it's labelled `Interim` with a warning.
+- Tijori calls some percentages ratios, such as CASA Ratio. Only names on an explicit list count as multiples, and an unknown row in a ratio section is `as_reported`, never assumed to be crore.
 - A figure missing from a recent quarter can be stored as 0, beside rows that prove it isn't. These are blanked with a warning, never replaced with a guess.
 - Section headers are stored as rows of zeros, so they're dropped.
 - Periods before a company had subsidiaries are blank in consolidated tables, so they're dropped too.
 - A row can have fewer values than there are periods. It's left out and named in a warning, because its alignment can't be known.
+
+**Company pages hold more than they show.** Named JSON blocks include `company_details_data`, `ratios_table`, `peers_table_data` and `corporate_actions`. `ratios_table` gives each ratio an explicit unit, which is better than working one out from its name, so `company_snapshot` should read it. Blocks such as `plan_details` and `user_prefs` describe the signed-in user and must be left alone.
+
+**Most data needs no sign-in.** Company pages, shareholding, operating metrics, fund flow, revenue history and screens all work anonymously. Some presets are marked with a premium `plan_tier`. Small companies can have no operating metrics at all, which is a normal result rather than an error.
 
 **Don't trust `Content-Type`.** Company search returns valid JSON labelled `text/html`, so responses are judged by their body.
 
