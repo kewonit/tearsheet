@@ -72,11 +72,26 @@ There will be 14 tools. Each accepts a company name, NSE symbol, BSE code or ISI
 
 Three prompts are planned too: `earnings_review`, `peer_comparison` and `thesis_check`.
 
-## Lessons from tijori-finance-mcp
+## How Tijori behaves
 
-[tijori-finance-mcp](https://github.com/LaZZy0v0/tijori-finance-mcp) documented how Tijori's site behaves. Tearsheet's Tijori code will need to handle these:
+Tested on 8 November 2026 with a signed-in paid account. [tijori-finance-mcp](https://github.com/LaZZy0v0/tijori-finance-mcp) documented much of this first, and Tearsheet's Tijori code must handle all of it.
 
-- The screener silently ignores unknown parameters, which gives plausible but wrong results. Every parameter must be checked against an allow-list.
-- Searching the screener's fields with a query only covers financials, so the full catalogue should be fetched once and searched locally.
+**Requests have to come from a browser.** A plain HTTP client gets a 403, while an ordinary headless browser that identifies itself honestly is served normally. Tearsheet will keep one headless browser open and make requests from inside a page.
+
+**Pages don't need rendering.** Company and shareholding pages carry their data in the HTML, and the financials page embeds its statements as JSON in a script tag. Parsing what comes back avoids loading pages and clicking tabs, which keeps each call fast. The IDs that operating metrics and fund flow need are in the company page too.
+
+**Don't trust `Content-Type`.** Company search returns valid JSON labelled `text/html`, so responses are judged by their body.
+
+**The screener needs guarding in three ways:**
+
+- Unknown parameters are silently ignored. Sending the business filter under the wrong name returned about 25 times as many companies, with status 200 and no error. Every parameter must be on an allow-list.
+- The response echoes the query it applied in `financial_q` and `alternate_q`. Tearsheet must compare these with what it sent, and return an error rather than results if a filter was dropped.
+- An unknown field returns a 500. Check fields against the cached catalogue first, so agents get a useful error and Tijori doesn't get bad queries.
+
+**Other details:**
+
+- Searching the screener's fields with a query only covers financials, so fetch the full catalogue once and search it locally.
 - Screener result keys can contain HTML, and preset links can contain raw newlines and `%` signs.
+- Company search also returns `brands` and `InActive` entries, which need filtering out or handling.
+- Operating metrics responses include peer data alongside the company's own series, which `compare_companies` can use.
 - Pages poll for live prices, so waiting for the network to go idle never finishes.
