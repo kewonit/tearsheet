@@ -20,6 +20,9 @@ dependencies = [
     "pydantic>=2.11",
 ]
 
+[project.scripts]
+tearsheet = "tearsheet.cli:main"
+
 [project.urls]
 Repository = "https://github.com/kewonit/tearsheet"
 Issues = "https://github.com/kewonit/tearsheet/issues"
@@ -36,6 +39,7 @@ packages = ["src/tearsheet"]
 
 [dependency-groups]
 dev = [
+    "jsonschema>=4",
     "pytest>=8",
     "ruff>=0.8",
 ]
