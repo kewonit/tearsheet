@@ -12,18 +12,20 @@ def _login() -> int:
     # Imported here so starting the server doesn't pay for Playwright.
     from playwright.sync_api import Error as PlaywrightError
 
-    from tearsheet.login import LoginTimeoutError, login
+    from tearsheet.login import LoginCancelledError, LoginTimeoutError, login
 
     print("Sign in to Tijori in the browser window that opens.")
+    print("If one sign-in method is refused in that window, try another.")
     path = paths.session_path()
     try:
         login(path)
-    except LoginTimeoutError as exc:
+    except (LoginCancelledError, LoginTimeoutError) as exc:
         print(exc, file=sys.stderr)
         return 1
     except PlaywrightError as exc:
-        print(f"The browser stopped before sign-in finished: {exc}", file=sys.stderr)
-        print("If Chromium is missing, run: playwright install chromium", file=sys.stderr)
+        print(f"The browser failed: {exc}", file=sys.stderr)
+        if "Executable doesn't exist" in str(exc):
+            print("Chromium is missing. Run: playwright install chromium", file=sys.stderr)
         return 1
     print(f"Signed in. Session saved to {path}")
     return 0
