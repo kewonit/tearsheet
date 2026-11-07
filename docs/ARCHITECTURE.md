@@ -56,7 +56,7 @@ There are 14 tools, listed in the [README](../README.md#tools). Each accepts a c
 
 ## Paid features
 
-Company pages state the session's plan and which features it unlocks. tearsheet reads that, and anything unclear counts as locked. Without a paid plan it keeps only the latest value of operating metrics, never requests revenue mix history, and refuses premium presets. Tijori's own page scripts do the same, and its API is more generous than its pages, so the pages are the rule tearsheet follows.
+Company pages state the session's plan and which features it unlocks. tearsheet reads that, and anything unclear counts as locked. Checked against a real free and a real premium account: every history flag reads false on free and true on premium. Without a paid plan it keeps only the latest value of operating metrics, never requests revenue mix history, and refuses premium presets. Tijori's own page scripts do the same, and its API is more generous than its pages, so the pages are the rule tearsheet follows.
 
 ## Filings
 
@@ -105,6 +105,8 @@ Tested on 8 November 2026 with a signed-in paid account. [tijori-finance-mcp](ht
 - Unknown parameters are silently ignored. Sending the business filter under the wrong name returned about 25 times as many companies, with status 200 and no error. Every parameter must be on an allow-list.
 - The response echoes the query it applied in `financial_q` and `alternate_q`. tearsheet must compare these with what it sent, and return an error rather than results if a filter was dropped.
 - An unknown field returns a 500. Check fields against the cached catalogue first, so agents get a useful error and Tijori doesn't get bad queries.
+
+**Chart dates mark months.** Metric and revenue mix points fall on the 1st of a month one year and the 31st the next, so histories are labelled by month and sorted by the real date.
 
 **Other details:**
 

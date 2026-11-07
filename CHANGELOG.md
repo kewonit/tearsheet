@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Paid plans
+
+- Checked against a real premium account: plan detection, operating metric history, revenue mix history, and all five premium presets, whose filters were confirmed applied.
+- Operating metric and revenue mix histories use month labels such as "Mar 2026". Tijori's chart dates mark a month with a day that varies from point to point, which made the same yearly figure look like different kinds of period.
+
 ### Filings
 
 - Checked against real integrated filings for a manufacturer, an NBFC, a bank and a life insurer, and a real annual report. The filing tools are no longer experimental.
