@@ -70,6 +70,11 @@ async def load_index(client: Client, cache: Cache) -> list[Company]:
         ) from exc
     if not companies:
         raise TearsheetError(ErrorCode.UPSTREAM_CHANGED, "Tijori's screener returned no companies.")
+    # Companies that moved from SME to the main board appear in both screens.
+    unique: dict[str, Company] = {}
+    for company in companies:
+        unique.setdefault(company.slug, company)
+    companies = list(unique.values())
     cache.put(
         "companies", "index", [company.model_dump() for company in companies], ttl_s=INDEX_TTL_S
     )
@@ -127,6 +132,8 @@ async def search_by_name(client: Client, query: str, companies: list[Company]) -
 
 
 async def find(client: Client, cache: Cache, query: str) -> list[Match]:
+    if not query.strip():
+        return []
     companies = await load_index(client, cache)
     return resolve(query, companies) or await search_by_name(client, query, companies)
 

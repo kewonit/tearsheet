@@ -1,15 +1,18 @@
 """The find_company tool."""
 
 from collections.abc import Callable
-from typing import Any
+from typing import Annotated, Any
 
 from mcp.server.mcpserver import MCPServer
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from tearsheet.core.cache import Cache
 from tearsheet.core.envelope import Entity, Envelope, Source, to_result
 from tearsheet.sources.tijori.client import BASE_URL, TijoriClient
 from tearsheet.sources.tijori.companies import Company, Match, MatchedOn, find
+
+MAX_QUERY_LENGTH = 200
+CompanyQuery = Annotated[str, Field(min_length=1, max_length=MAX_QUERY_LENGTH)]
 
 
 class CompanyMatch(BaseModel):
@@ -61,7 +64,7 @@ def register(server: MCPServer, *, client: TijoriClient, cache: Cache, read_only
     tool: Callable = server.tool(annotations=read_only)
 
     @tool
-    async def find_company(query: str) -> Envelope[CompanySearch]:
+    async def find_company(query: CompanyQuery) -> Envelope[CompanySearch]:
         """Find a listed Indian company and its identifiers.
 
         Accepts an NSE symbol, a BSE code, a company name or part of one. Returns

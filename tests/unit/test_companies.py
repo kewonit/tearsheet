@@ -110,6 +110,21 @@ def test_index_is_built_from_both_markets_and_cached(cache):
     assert len(client.paths) == requests == 2
 
 
+def test_a_company_in_both_markets_appears_once_as_main_board(cache):
+    row = screen_row()
+    companies = asyncio.run(load_index(FakeClient(main=[row], sme=[row]), cache))
+    assert [(c.slug, c.market) for c in companies] == [("acme-finechem-limited", "main")]
+
+
+@pytest.mark.parametrize("query", ["", "   "])
+def test_a_blank_query_finds_nothing_without_asking_tijori(cache, query):
+    client = FakeClient(
+        main=[screen_row()], search=[{"name": "x", "slug": "x", "type": "companies"}]
+    )
+    assert asyncio.run(find(client, cache, query)) == []
+    assert client.paths == []
+
+
 def test_an_empty_index_is_a_changed_site_and_is_not_cached(cache):
     with pytest.raises(TearsheetError) as caught:
         asyncio.run(load_index(FakeClient(), cache))
