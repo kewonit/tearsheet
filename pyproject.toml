@@ -15,9 +15,11 @@ classifiers = [
     "Topic :: Office/Business :: Financial :: Investment",
 ]
 dependencies = [
+    "defusedxml>=0.7",
     "mcp>=2.3,<3",
     "playwright>=1.64",
     "pydantic>=2.11",
+    "pypdf>=5",
 ]
 
 [project.scripts]

@@ -92,6 +92,11 @@ def register(server: MCPServer, *, client: TijoriClient, cache: Cache, read_only
             parsed = build_statement(
                 tables, statement=statement, basis=basis, detail=detail, periods=periods
             )
+        verification = None
+        if statement == "quarterly":
+            from tearsheet.tools.filings import verify_quarterly
+
+            verification = verify_quarterly(parsed.statement, match.company.nse, match.company.bse)
         url = f"{BASE_URL}/company/{match.company.slug}/financials/"
         return to_result(
             Envelope[FinancialStatement](
@@ -102,5 +107,6 @@ def register(server: MCPServer, *, client: TijoriClient, cache: Cache, read_only
                 units=Units(),
                 sources=[Source(provider="tijori", url=url)],
                 warnings=parsed.warnings,
+                **({"verification": verification} if verification else {}),
             )
         )
