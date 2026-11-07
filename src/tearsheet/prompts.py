@@ -2,7 +2,7 @@
 
 Each prompt asks for facts with their units, periods and sources, and for
 the gaps to be stated. None of them asks for a buy or sell view, because
-Tearsheet doesn't give investment advice.
+tearsheet doesn't give investment advice.
 """
 
 from mcp.server.mcpserver import MCPServer
@@ -17,7 +17,7 @@ RULES = (
 
 def earnings_review(company: str) -> str:
     return (
-        f"Review the latest results for {company} using the Tearsheet tools.\n"
+        f"Review the latest results for {company} using the tearsheet tools.\n"
         "1. Call get_financials with statement quarterly for the last 5 quarters.\n"
         "2. Call get_financials with statement income for the last 3 years.\n"
         "3. Summarise how revenue, operating profit and net profit changed, quarter on "
@@ -30,7 +30,7 @@ def earnings_review(company: str) -> str:
 
 def peer_comparison(company: str) -> str:
     return (
-        f"Compare {company} with its closest listed peers using the Tearsheet tools.\n"
+        f"Compare {company} with its closest listed peers using the tearsheet tools.\n"
         "1. Call company_snapshot to see the company and get_business_mix to see what it sells.\n"
         "2. Choose up to four peers in the same business, using get_sector_view or "
         "screen_stocks if needed, and say why each was chosen.\n"
@@ -45,7 +45,7 @@ def thesis_check(company: str, thesis: str) -> str:
     return (
         f"Check this claim about {company} against the data: {thesis}\n"
         "1. Break the claim into statements that figures can confirm or contradict.\n"
-        "2. For each one, call the Tearsheet tool that holds the evidence, such as "
+        "2. For each one, call the tearsheet tool that holds the evidence, such as "
         "get_financials, get_ownership, get_business_mix or get_operating_metrics.\n"
         "3. Mark each statement as supported, contradicted or not checkable with this "
         "data, and give the figures behind each verdict.\n"

@@ -5,7 +5,7 @@ from typing import Literal, Protocol
 
 from pydantic import BaseModel
 
-from tearsheet.core.errors import ErrorCode, TearsheetError
+from tearsheet.core.errors import ErrorCode, ToolFailure
 from tearsheet.sources.tijori.client import Response
 from tearsheet.sources.tijori.pages import clean_text, number, table_rows
 
@@ -56,7 +56,7 @@ def parse_markets(html: str) -> dict[str, MarketTable]:
     for kind, table_id in TABLES.items():
         rows = table_rows(html, table_id)
         if not rows:
-            raise TearsheetError(ErrorCode.UPSTREAM_CHANGED, f"Tijori's {kind} table is empty.")
+            raise ToolFailure(ErrorCode.UPSTREAM_CHANGED, f"Tijori's {kind} table is empty.")
         header = rows[0].cells
         keep = [i for i, label in enumerate(header) if label.strip().lower() not in _SKIP_COLUMNS]
         parsed = []
@@ -77,11 +77,11 @@ def parse_markets(html: str) -> dict[str, MarketTable]:
 
 async def load_constituents(client: Client, kind: str, market_id: str) -> list[Constituent]:
     if not market_id.isdigit():
-        raise TearsheetError(ErrorCode.UPSTREAM_CHANGED, "Tijori's market id isn't a number.")
+        raise ToolFailure(ErrorCode.UPSTREAM_CHANGED, "Tijori's market id isn't a number.")
     body = (await client.get(CONSTITUENTS[kind].format(id=market_id))).json()
     items = body.get("data") if isinstance(body, dict) else None
     if not isinstance(items, list):
-        raise TearsheetError(ErrorCode.UPSTREAM_CHANGED, "Tijori's constituents changed shape.")
+        raise ToolFailure(ErrorCode.UPSTREAM_CHANGED, "Tijori's constituents changed shape.")
     constituents = [
         Constituent(
             name=clean_text(item.get("name"), 80),

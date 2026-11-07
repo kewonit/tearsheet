@@ -1,7 +1,7 @@
 [project]
 name = "tearsheet"
 dynamic = ["version"]
-description = "Unofficial local MCP server for researching Indian stocks with your own Tijori Finance account and your own filings"
+description = "Local MCP server for researching Indian listed companies with Tijori Finance and your own filings"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

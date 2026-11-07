@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 
 from tearsheet.core.cache import Cache
 from tearsheet.core.envelope import Envelope, Source, to_result
-from tearsheet.core.errors import ErrorCode, TearsheetError
+from tearsheet.core.errors import ErrorCode, ToolFailure
 from tearsheet.sources.tijori.client import BASE_URL, TijoriClient
 from tearsheet.sources.tijori.markets import (
     Constituent,
@@ -76,13 +76,13 @@ def register(server: MCPServer, *, client: TijoriClient, cache: Cache, read_only
             exact = [r for r in found if r.name.lower() == wanted]
             found = exact or found
             if not found:
-                raise TearsheetError(
+                raise ToolFailure(
                     ErrorCode.NOT_FOUND,
                     f"No {kind} entry matched {name!r}.",
                     hint=f"Some options: {', '.join(r.name for r in rows[:15])}.",
                 )
             if len(found) > 1:
-                raise TearsheetError(
+                raise ToolFailure(
                     ErrorCode.INVALID_INPUT,
                     f"{name!r} matches several: {', '.join(r.name for r in found[:10])}.",
                 )

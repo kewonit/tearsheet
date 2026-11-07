@@ -1,15 +1,15 @@
-# Analyst tasks for measuring Tearsheet with a real agent.
+# Analyst tasks for measuring tearsheet with a real agent.
 #
 # Checks use only public identifiers and behaviour, never Tijori's figures, so
 # no Tijori data is stored here. Tune tool descriptions against the "tuning"
 # split only, and use "held_out" to check that changes generalise.
 #
 # Check fields:
-#   first_tool        the first Tearsheet tool the agent should call
-#   tools_include     Tearsheet tools the agent must call
+#   first_tool        the first tearsheet tool the agent should call
+#   tools_include     tearsheet tools the agent must call
 #   contains          text the answer must contain, ignoring case
 #   contains_any      at least one of these must appear, ignoring case
-#   max_tool_calls    a budget for Tearsheet tool calls
+#   max_tool_calls    a budget for tearsheet tool calls
 
 [[task]]
 id = "t-id-01"

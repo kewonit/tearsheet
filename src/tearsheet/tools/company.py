@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 
 from tearsheet.core.cache import Cache
 from tearsheet.core.envelope import Envelope, Source, to_result
-from tearsheet.core.errors import ErrorCode, TearsheetError
+from tearsheet.core.errors import ErrorCode, ToolFailure
 from tearsheet.sources.tijori.client import BASE_URL, TijoriClient
 from tearsheet.sources.tijori.companies import Match, find_one
 from tearsheet.sources.tijori.company_page import (
@@ -45,7 +45,7 @@ class CompanyData(BaseModel):
 async def _fetch(client: TijoriClient, path: str) -> str:
     response = await client.get(path)
     if response.status != 200:
-        raise TearsheetError(
+        raise ToolFailure(
             ErrorCode.UPSTREAM_CHANGED, f"Tijori returned {response.status} for {path}."
         )
     return response.text
@@ -149,7 +149,7 @@ async def _metric_points(
     body = response.json()
     series = body.get("data") if isinstance(body, dict) else None
     if not isinstance(series, list):
-        raise TearsheetError(ErrorCode.UPSTREAM_CHANGED, "Tijori's metric data changed shape.")
+        raise ToolFailure(ErrorCode.UPSTREAM_CHANGED, "Tijori's metric data changed shape.")
     points = []
     for point in series:
         if isinstance(point, list) and len(point) == 2:
@@ -250,7 +250,7 @@ def register(server: MCPServer, *, client: TijoriClient, cache: Cache, read_only
         history = data.page.entitlements.metrics_history
         series = []
         if chosen and data.page.company_id is None:
-            raise TearsheetError(ErrorCode.UPSTREAM_CHANGED, "Tijori's page has no company id.")
+            raise ToolFailure(ErrorCode.UPSTREAM_CHANGED, "Tijori's page has no company id.")
         for info in chosen:
             points = await _metric_points(client, cache, data.page.company_id, info, history)
             latest = points[-1] if points else (None, None)

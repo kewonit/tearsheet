@@ -19,7 +19,7 @@ from tearsheet.sources.tijori.client import TijoriClient
 from tearsheet.tools import companies, company, compare, filings, financials, markets, screening
 
 INSTRUCTIONS = (
-    "Tearsheet gives facts and calculations for researching Indian listed companies, "
+    "tearsheet gives facts and calculations for researching Indian listed companies, "
     "using the user's own Tijori Finance account and filings they added themselves. "
     "It does not give investment advice. Every result says how old its data is and "
     "whether it was checked against a filing, so report those alongside any figure."
@@ -113,7 +113,7 @@ def build_server() -> MCPServer:
 
     @server.tool(annotations=READ_ONLY)
     def server_status() -> Envelope[ServerStatus]:
-        """Report whether Tearsheet is ready to use.
+        """Report whether tearsheet is ready to use.
 
         Shows whether a Tijori session is saved, what is in the local cache and
         how many filings the user has added. Call this first if another tool

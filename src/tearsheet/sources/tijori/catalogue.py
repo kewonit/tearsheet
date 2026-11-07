@@ -12,7 +12,7 @@ from typing import Protocol
 from pydantic import BaseModel
 
 from tearsheet.core.cache import Cache
-from tearsheet.core.errors import ErrorCode, TearsheetError
+from tearsheet.core.errors import ErrorCode, ToolFailure
 from tearsheet.sources.tijori.client import Response
 
 CATALOGUE_PATH = "/api/filter_queries/filter_field_search/?q=&query_type=financials"
@@ -42,7 +42,7 @@ async def load_catalogue(client: Client, cache: Cache) -> list[Field]:
     body = (await client.get(CATALOGUE_PATH)).json()
     items = body.get("data") if isinstance(body, dict) else None
     if not isinstance(items, list) or not items:
-        raise TearsheetError(ErrorCode.UPSTREAM_CHANGED, "Tijori's field catalogue changed shape.")
+        raise ToolFailure(ErrorCode.UPSTREAM_CHANGED, "Tijori's field catalogue changed shape.")
     fields = [
         Field(
             name=str(item["value"]),
@@ -101,7 +101,7 @@ def check_query(query: str, fields: list[Field]) -> None:
             if close:
                 options = " or ".join(repr(names[c]) for c in close)
                 suggestions.append(f"{name!r}: did you mean {options}?")
-        raise TearsheetError(
+        raise ToolFailure(
             ErrorCode.INVALID_INPUT,
             f"Unknown screener field: {', '.join(repr(u) for u in unknown[:3])}.",
             hint=" ".join(suggestions) or "Use search_screen_fields to find exact field names.",

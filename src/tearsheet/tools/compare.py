@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from tearsheet.analytics.ratios import cagr_percent, growth_percent, summary
 from tearsheet.core.cache import Cache
 from tearsheet.core.envelope import Envelope, Source, to_result
-from tearsheet.core.errors import ErrorCode, TearsheetError
+from tearsheet.core.errors import ErrorCode, ToolFailure
 from tearsheet.sources.tijori.client import BASE_URL, TijoriClient
 from tearsheet.sources.tijori.companies import find_one
 from tearsheet.sources.tijori.financials import build_statement
@@ -118,7 +118,7 @@ def register(server: MCPServer, *, client: TijoriClient, cache: Cache, read_only
         for query in companies:
             match = await find_one(client, cache, query)
             if match.company.slug in seen:
-                raise TearsheetError(ErrorCode.INVALID_INPUT, f"{query!r} is listed twice.")
+                raise ToolFailure(ErrorCode.INVALID_INPUT, f"{query!r} is listed twice.")
             seen.add(match.company.slug)
             data, _ = await load_company(client, cache, match.company.slug)
             tables, _ = await load_tables(client, cache, match.company.slug)

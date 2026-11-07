@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 from tearsheet.core.cache import Cache
 from tearsheet.core.envelope import Envelope, Source, to_result
-from tearsheet.core.errors import ErrorCode, TearsheetError
+from tearsheet.core.errors import ErrorCode, ToolFailure
 from tearsheet.sources.tijori.catalogue import check_query, load_catalogue, search_fields
 from tearsheet.sources.tijori.client import BASE_URL, TijoriClient
 from tearsheet.sources.tijori.screener import Preset, load_presets, run_screen
@@ -110,7 +110,7 @@ def _match_preset(presets: list[Preset], name: str) -> Preset:
     if len(found) != 1:
         options = ", ".join(sorted(p.name for p in presets))
         problem = "matches several presets" if found else "isn't a preset"
-        raise TearsheetError(
+        raise ToolFailure(
             ErrorCode.INVALID_INPUT, f"{name!r} {problem}.", hint=f"Presets: {options}."
         )
     return found[0]
@@ -184,11 +184,11 @@ def register(server: MCPServer, *, client: TijoriClient, cache: Cache, read_only
         results. Main board by default; set sme for SME listings.
         """
         if preset and (financial or business):
-            raise TearsheetError(
+            raise ToolFailure(
                 ErrorCode.INVALID_INPUT, "Use a preset or your own filters, not both."
             )
         if not (preset or financial or business):
-            raise TearsheetError(
+            raise ToolFailure(
                 ErrorCode.INVALID_INPUT,
                 "Give a financial condition, a business filter or a preset.",
                 hint="For example: financial='Market Capitalization > 1000 AND ROCE > 20%'.",
@@ -199,7 +199,7 @@ def register(server: MCPServer, *, client: TijoriClient, cache: Cache, read_only
         if preset:
             chosen = _match_preset(await presets(), preset)
             if chosen.paid_only and await session_plan(client, cache) == "free":
-                raise TearsheetError(
+                raise ToolFailure(
                     ErrorCode.PLAN_REQUIRED,
                     f"The {chosen.name!r} preset needs a paid Tijori plan.",
                     hint="Use a free preset or your own filters.",
@@ -223,7 +223,7 @@ def register(server: MCPServer, *, client: TijoriClient, cache: Cache, read_only
         columns, rows = shape_rows(entry.value, units)
         if sort_by:
             if sort_by not in {c.name for c in columns}:
-                raise TearsheetError(
+                raise ToolFailure(
                     ErrorCode.INVALID_INPUT,
                     f"Can't sort by {sort_by!r}.",
                     hint=f"Columns: {', '.join(c.name for c in columns)}.",

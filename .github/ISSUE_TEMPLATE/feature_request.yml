@@ -1,5 +1,5 @@
 name: Feature request
-description: Something Tearsheet should do
+description: Something tearsheet should do
 labels: [enhancement]
 body:
   - type: textarea

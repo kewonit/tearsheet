@@ -13,7 +13,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from tearsheet.core.errors import ErrorCode, TearsheetError
+from tearsheet.core.errors import ErrorCode, ToolFailure
 
 _JSON_TAG = re.compile(
     r"""<script(?=[^>]*type=["']application/json["'])(?=[^>]*\bid=["']([^"']+)["'])[^>]*>(.*?)</script>""",
@@ -37,7 +37,7 @@ def json_blocks(html: str) -> dict[str, Any]:
 def require_block(blocks: dict[str, Any], name: str, kind: type) -> Any:
     value = blocks.get(name)
     if not isinstance(value, kind):
-        raise TearsheetError(
+        raise ToolFailure(
             ErrorCode.UPSTREAM_CHANGED, f"Tijori's page no longer has its {name} data."
         )
     return value
@@ -136,7 +136,7 @@ def table_rows(html: str, table_id: str) -> list[Row]:
     reader = _TableReader(table_id)
     reader.feed(html)
     if not reader.found:
-        raise TearsheetError(
+        raise ToolFailure(
             ErrorCode.UPSTREAM_CHANGED, f"Tijori's page no longer has its {table_id} table."
         )
     return [row for row in reader.rows if row.cells]

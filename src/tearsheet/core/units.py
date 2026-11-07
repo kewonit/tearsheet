@@ -1,7 +1,7 @@
 """Convert money figures to one scale.
 
 Sources report in rupees, lakh, million or crore. Misreading the scale is an
-easy and damaging mistake, so every figure Tearsheet returns is in crore and
+easy and damaging mistake, so every figure tearsheet returns is in crore and
 says so.
 """
 

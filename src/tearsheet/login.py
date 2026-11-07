@@ -1,6 +1,6 @@
 """Sign in to Tijori through a real browser window.
 
-The user signs in on Tijori's own page, so Tearsheet never sees their password.
+The user signs in on Tijori's own page, so tearsheet never sees their password.
 Only the resulting cookies are saved.
 """
 

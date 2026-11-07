@@ -1,14 +1,14 @@
-# Tearsheet
+# tearsheet
 
-Tearsheet is a local [MCP](https://modelcontextprotocol.io) server that helps AI agents research Indian listed companies. It reads [Tijori Finance](https://www.tijorifinance.com) the way your browser does, and can check figures against filings you download yourself.
+tearsheet is a local [MCP](https://modelcontextprotocol.io) server that helps AI agents research Indian listed companies. It reads [Tijori Finance](https://www.tijorifinance.com) the way your browser does, and can check figures against filings you download yourself.
 
 > **Alpha.** The 11 Tijori tools are tested against the live site. The 3 filing tools are experimental and tested only on made-up filings. Sign-in hasn't been tested on Tijori itself yet.
 
-> **Unofficial.** Tearsheet isn't affiliated with or endorsed by Tijori Financial Services, NSE or BSE. Read [how it uses data](docs/DATA-USE.md) before you use it.
+> tearsheet isn't affiliated with or endorsed by Tijori Financial Services, NSE or BSE. Read [how it uses data](docs/DATA-USE.md) before you use it.
 
 ## What it's for
 
-Agents are good at reasoning about a company and bad at getting exact figures right. Tearsheet is built around that:
+Agents are good at reasoning about a company and bad at getting exact figures right. tearsheet is built around that:
 
 - **Units on every figure.** Statements mix crore, percentages, days and multiples, so every row says which it is.
 - **Honest periods.** Trailing twelve months and interim columns are labelled, rather than passing as financial years.
@@ -41,7 +41,7 @@ There are also three prompts: `earnings_review`, `peer_comparison` and `thesis_c
 
 ## Install
 
-Tearsheet needs [uv](https://docs.astral.sh/uv/) and isn't on PyPI yet.
+tearsheet needs [uv](https://docs.astral.sh/uv/) and isn't on PyPI yet.
 
 ```sh
 git clone https://github.com/kewonit/tearsheet.git
@@ -71,13 +71,13 @@ claude mcp add tearsheet -- uv --directory /path/to/tearsheet run tearsheet
 
 ## Signing in
 
-You don't need to sign in: every tool works from Tijori's public pages. If your Tijori plan includes data that free accounts don't get, such as metric history, run `uv run tearsheet login` and sign in on Tijori's page. Your password goes to Tijori, never to Tearsheet.
+You don't need to sign in: every tool works from Tijori's public pages. If your Tijori plan includes data that free accounts don't get, such as metric history, run `uv run tearsheet login` and sign in on Tijori's page. Your password goes to Tijori, never to tearsheet.
 
-Tearsheet only returns what your plan shows. On the free plan that means the latest value of operating metrics, revenue mix and market share, but not their history. See [DATA-USE.md](docs/DATA-USE.md) for why.
+tearsheet only returns what your plan shows. On the free plan that means the latest value of operating metrics, revenue mix and market share, but not their history. See [DATA-USE.md](docs/DATA-USE.md) for why.
 
 ## Filings (experimental)
 
-The exchanges prohibit automated collection, so Tearsheet never downloads filings. Download them by hand and put them in `~/.tearsheet/filings`:
+The exchanges prohibit automated collection, so tearsheet never downloads filings. Download them by hand and put them in `~/.tearsheet/filings`:
 
 - **XBRL results filings** identify their own company, so any name works.
 - **PDFs**, such as annual reports and concall transcripts, go in a folder named after the NSE symbol or BSE code, such as `filings/NGLFINE/annual-report-2026.pdf`.
@@ -91,14 +91,14 @@ The exchanges prohibit automated collection, so Tearsheet never downloads filing
 | `TEARSHEET_HOME` | `~/.tearsheet` | Your session and the cache |
 | `TEARSHEET_FILINGS_DIR` | `~/.tearsheet/filings` | Filings you downloaded |
 
-Everything stays on your machine. Tearsheet makes at most about one request a second to Tijori, and none to NSE or BSE.
+Everything stays on your machine. tearsheet makes at most about one request a second to Tijori, and none to NSE or BSE.
 
 ## Know the limits
 
 - Prices on Tijori are delayed, not live.
 - Figures are Tijori's, and are marked unchecked unless a filing confirms them.
-- Tearsheet reads Tijori's web pages, which can change without notice. When they do, tools fail with a clear error rather than returning bad data.
-- Some of Tijori's own presets are broken, and Tearsheet passes on Tijori's error when one fails.
+- tearsheet reads Tijori's web pages, which can change without notice. When they do, tools fail with a clear error rather than returning bad data.
+- Some of Tijori's own presets are broken, and tearsheet passes on Tijori's error when one fails.
 
 ## Evaluation
 
@@ -106,7 +106,7 @@ Everything stays on your machine. Tearsheet makes at most about one request a se
 
 ## Not investment advice
 
-Tearsheet provides facts and calculations for research. It doesn't recommend buying, selling or holding anything, can't place orders, and isn't a SEBI-registered adviser or research analyst. Data can be wrong or out of date, so check anything you plan to rely on.
+tearsheet provides facts and calculations for research. It doesn't recommend buying, selling or holding anything, can't place orders, and isn't a SEBI-registered adviser or research analyst. Data can be wrong or out of date, so check anything you plan to rely on.
 
 ## Contributing
 

@@ -2,7 +2,7 @@ from datetime import date
 
 import pytest
 
-from tearsheet.core.errors import ErrorCode, TearsheetError
+from tearsheet.core.errors import ErrorCode, ToolFailure
 from tearsheet.sources.tijori.pages import (
     clean_text,
     date_from_epoch_ms,
@@ -84,6 +84,6 @@ def test_table_rows_finds_its_table_by_id_ignoring_others_and_nested_tables():
 
 
 def test_a_missing_table_is_a_changed_site():
-    with pytest.raises(TearsheetError) as caught:
+    with pytest.raises(ToolFailure) as caught:
         table_rows("<table id='other'></table>", "wanted")
     assert caught.value.code is ErrorCode.UPSTREAM_CHANGED

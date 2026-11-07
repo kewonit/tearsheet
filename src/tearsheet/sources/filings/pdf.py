@@ -4,7 +4,7 @@ from pathlib import Path
 
 from pypdf import PdfReader
 
-from tearsheet.core.errors import ErrorCode, TearsheetError
+from tearsheet.core.errors import ErrorCode, ToolFailure
 
 MAX_PAGES_SCANNED = 400
 MAX_PAGES_RETURNED = 10
@@ -15,7 +15,7 @@ def _reader(path: Path) -> PdfReader:
     try:
         return PdfReader(path)
     except Exception as exc:  # pypdf raises many types for damaged files
-        raise TearsheetError(ErrorCode.INVALID_INPUT, f"{path.name} isn't a readable PDF.") from exc
+        raise ToolFailure(ErrorCode.INVALID_INPUT, f"{path.name} isn't a readable PDF.") from exc
 
 
 def page_count(path: Path) -> int:

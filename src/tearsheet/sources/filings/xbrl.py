@@ -13,7 +13,7 @@ from pathlib import Path
 from defusedxml import ElementTree
 from pydantic import BaseModel
 
-from tearsheet.core.errors import ErrorCode, TearsheetError
+from tearsheet.core.errors import ErrorCode, ToolFailure
 from tearsheet.core.units import Scale, to_crore
 
 XBRLI = "{http://www.xbrl.org/2003/instance}"
@@ -95,7 +95,7 @@ def read_xbrl(path: Path) -> XbrlFiling:
     try:
         root = ElementTree.parse(path).getroot()
     except Exception as exc:  # defusedxml raises several types for unsafe or broken files
-        raise TearsheetError(
+        raise ToolFailure(
             ErrorCode.INVALID_INPUT, f"{path.name} isn't a readable XBRL file."
         ) from exc
     contexts = {}

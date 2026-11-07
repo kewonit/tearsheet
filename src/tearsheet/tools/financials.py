@@ -9,7 +9,7 @@ from pydantic import Field
 
 from tearsheet.core.cache import Cache
 from tearsheet.core.envelope import Envelope, Source, Units, to_result
-from tearsheet.core.errors import ErrorCode, TearsheetError
+from tearsheet.core.errors import ErrorCode, ToolFailure
 from tearsheet.sources.tijori.client import BASE_URL, TijoriClient
 from tearsheet.sources.tijori.companies import find_one
 from tearsheet.sources.tijori.financials import (
@@ -35,7 +35,7 @@ async def load_tables(
         return entry.value, datetime.fromtimestamp(entry.fetched_at, UTC)
     response = await client.get(f"/company/{slug}/financials/")
     if response.status != 200:
-        raise TearsheetError(
+        raise ToolFailure(
             ErrorCode.UPSTREAM_CHANGED, f"Tijori returned {response.status} for this company."
         )
     tables = parse_tables(response.text)
@@ -52,7 +52,7 @@ async def _fund_flow(
     if entry is None:
         data, _ = await load_company(client, cache, slug)
         if data.page.company_id is None:
-            raise TearsheetError(ErrorCode.UPSTREAM_CHANGED, "Tijori's page has no company id.")
+            raise ToolFailure(ErrorCode.UPSTREAM_CHANGED, "Tijori's page has no company id.")
         response = await client.get(f"/api/v1/ind/fund_flow_analysis_data/{data.page.company_id}/")
         cache.put("fund_flow", slug, response.json(), ttl_s=FINANCIALS_TTL_S)
         entry = cache.get("fund_flow", slug)

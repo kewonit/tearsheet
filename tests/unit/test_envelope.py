@@ -69,8 +69,8 @@ def test_an_oversized_result_is_refused_with_a_way_forward():
     import pytest
 
     from tearsheet.core.envelope import MAX_RESULT_CHARS
-    from tearsheet.core.errors import TearsheetError
+    from tearsheet.core.errors import ToolFailure
 
-    with pytest.raises(TearsheetError) as caught:
+    with pytest.raises(ToolFailure) as caught:
         to_result(Envelope[str](data="x" * MAX_RESULT_CHARS))
     assert "fewer periods" in caught.value.hint

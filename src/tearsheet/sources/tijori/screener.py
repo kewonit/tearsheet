@@ -12,7 +12,7 @@ from urllib.parse import urlencode
 
 from pydantic import BaseModel
 
-from tearsheet.core.errors import ErrorCode, TearsheetError
+from tearsheet.core.errors import ErrorCode, ToolFailure
 from tearsheet.sources.tijori.client import Response
 
 SCREEN_PATH = "/api/filter_queries/advanced_search/"
@@ -34,7 +34,7 @@ def _clean_key(key: str) -> str:
 
 def _require_applied(name: str, sent: str, echoed: Any) -> None:
     if sent and _squash(sent) not in _squash(str(echoed or "")):
-        raise TearsheetError(
+        raise ToolFailure(
             ErrorCode.UPSTREAM_CHANGED,
             f"Tijori didn't apply the {name} filter, so these results can't be trusted.",
         )
@@ -73,17 +73,17 @@ async def run_screen(
     response = await client.get(f"{path}?{urlencode(params)}")
     body = response.json()
     if not isinstance(body, dict):
-        raise TearsheetError(ErrorCode.UPSTREAM_CHANGED, "Tijori's screener response changed.")
+        raise ToolFailure(ErrorCode.UPSTREAM_CHANGED, "Tijori's screener response changed.")
     if response.status == 500 or body.get("error"):
         detail = " ".join(str(body.get("error") or "").split())[:150]
         reason = f" Tijori said: {detail}." if detail else ""
         if preset_id is not None:
-            raise TearsheetError(
+            raise ToolFailure(
                 ErrorCode.UPSTREAM_CHANGED,
                 f"Tijori's own preset failed to run.{reason}",
                 hint="This is a fault in Tijori's preset. Try another preset or your own filters.",
             )
-        raise TearsheetError(
+        raise ToolFailure(
             ErrorCode.INVALID_INPUT,
             f"Tijori couldn't run that screen.{reason}",
             hint="Field names must match Tijori's catalogue exactly.",
@@ -92,7 +92,7 @@ async def run_screen(
     _require_applied("alternate", alternate, body.get("alternate_q"))
     rows = body.get("data")
     if response.status != 200 or not isinstance(rows, list):
-        raise TearsheetError(ErrorCode.UPSTREAM_CHANGED, "Tijori's screener response changed.")
+        raise ToolFailure(ErrorCode.UPSTREAM_CHANGED, "Tijori's screener response changed.")
     return [{_clean_key(key): value for key, value in row.items()} for row in rows]
 
 
@@ -113,7 +113,7 @@ class Preset(BaseModel):
 async def load_presets(client: Client) -> list[Preset]:
     body = (await client.get(PRESETS_PATH)).json()
     if not isinstance(body, dict):
-        raise TearsheetError(ErrorCode.UPSTREAM_CHANGED, "Tijori's preset list changed shape.")
+        raise ToolFailure(ErrorCode.UPSTREAM_CHANGED, "Tijori's preset list changed shape.")
     presets = []
     for category, items in body.items():
         for item in items if isinstance(items, list) else []:
@@ -131,7 +131,7 @@ async def load_presets(client: Client) -> list[Preset]:
                     )
                 )
             except (KeyError, TypeError, ValueError) as exc:
-                raise TearsheetError(
+                raise ToolFailure(
                     ErrorCode.UPSTREAM_CHANGED, "Tijori's preset list changed shape."
                 ) from exc
     return presets

@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel
 
-from tearsheet.core.errors import ErrorCode, TearsheetError
+from tearsheet.core.errors import ErrorCode, ToolFailure
 from tearsheet.sources.tijori.pages import clean_text, month_label, number, table_rows
 
 # The page also holds sample forecast tables for another product, so the
@@ -36,10 +36,10 @@ def parse_shareholding(html: str, *, full: bool, periods: int) -> Ownership:
     """Categories by default. Full adds named holders, which companies disclose above 1%."""
     rows = table_rows(html, TABLE_ID)
     if len(rows) < 2:
-        raise TearsheetError(ErrorCode.UPSTREAM_CHANGED, "Tijori's shareholding table is empty.")
+        raise ToolFailure(ErrorCode.UPSTREAM_CHANGED, "Tijori's shareholding table is empty.")
     labels = [month_label(cell) for cell in rows[0].cells[1:]]
     if not labels or None in labels:
-        raise TearsheetError(
+        raise ToolFailure(
             ErrorCode.UPSTREAM_CHANGED, "Tijori's shareholding periods aren't month labels."
         )
     keep = slice(-periods, None)

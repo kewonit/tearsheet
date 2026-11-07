@@ -2,7 +2,7 @@
 
 import pytest
 
-from tearsheet.core.errors import ErrorCode, TearsheetError
+from tearsheet.core.errors import ErrorCode, ToolFailure
 from tearsheet.sources.tijori.ownership import parse_shareholding
 
 PAGE = """
@@ -65,6 +65,6 @@ def test_rows_of_the_wrong_length_are_left_out():
 
 def test_unreadable_period_labels_are_a_changed_site():
     broken = PAGE.replace("Mar'26", "First quarter")
-    with pytest.raises(TearsheetError) as caught:
+    with pytest.raises(ToolFailure) as caught:
         parse_shareholding(broken, full=False, periods=4)
     assert caught.value.code is ErrorCode.UPSTREAM_CHANGED

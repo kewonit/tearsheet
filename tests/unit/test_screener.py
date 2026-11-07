@@ -4,7 +4,7 @@ from urllib.parse import parse_qs, urlparse
 
 import pytest
 
-from tearsheet.core.errors import ErrorCode, TearsheetError
+from tearsheet.core.errors import ErrorCode, ToolFailure
 from tearsheet.sources.tijori.client import Response
 from tearsheet.sources.tijori.screener import run_screen
 
@@ -73,7 +73,7 @@ def test_unknown_options_cannot_be_passed():
     ],
 )
 def test_refuses_results_when_a_filter_was_not_applied(kwargs, overrides):
-    with pytest.raises(TearsheetError) as caught:
+    with pytest.raises(ToolFailure) as caught:
         run(FakeClient(body(**overrides)), **kwargs)
     assert caught.value.code is ErrorCode.UPSTREAM_CHANGED
 
@@ -83,7 +83,7 @@ def test_echo_comparison_ignores_spacing_and_case():
 
 
 def test_a_bad_query_explains_itself():
-    with pytest.raises(TearsheetError) as caught:
+    with pytest.raises(ToolFailure) as caught:
         run(FakeClient({"error": "bad"}, status=500), financial="Made Up > 1")
     assert caught.value.code is ErrorCode.INVALID_INPUT
     assert "catalogue" in caught.value.hint
@@ -93,6 +93,6 @@ def test_a_bad_query_explains_itself():
     "bad", [[], {"financial_q": "ROCE > 20"}, {"data": 5, "financial_q": "ROCE > 20"}]
 )
 def test_an_unexpected_shape_is_reported_as_a_changed_site(bad):
-    with pytest.raises(TearsheetError) as caught:
+    with pytest.raises(ToolFailure) as caught:
         run(FakeClient(bad), financial="ROCE > 20")
     assert caught.value.code is ErrorCode.UPSTREAM_CHANGED

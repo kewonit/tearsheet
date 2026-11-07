@@ -1,5 +1,5 @@
 name: Bug report
-description: Something Tearsheet does wrong
+description: Something tearsheet does wrong
 labels: [bug]
 body:
   - type: markdown

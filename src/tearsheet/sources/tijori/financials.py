@@ -23,7 +23,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel
 
-from tearsheet.core.errors import ErrorCode, TearsheetError
+from tearsheet.core.errors import ErrorCode, ToolFailure
 
 Statement = Literal["income", "balance_sheet", "cash_flow", "quarterly", "ratios", "fund_flow"]
 Basis = Literal["consolidated", "standalone"]
@@ -92,17 +92,17 @@ def parse_tables(html: str) -> dict[str, Any]:
     """Pull the embedded tables out of a financials page."""
     found = _DATA_TAG.search(html)
     if found is None:
-        raise TearsheetError(
+        raise ToolFailure(
             ErrorCode.UPSTREAM_CHANGED, "Tijori's financials page no longer embeds its data."
         )
     try:
         tables = json.loads(found.group(1))
     except ValueError as exc:
-        raise TearsheetError(
+        raise ToolFailure(
             ErrorCode.UPSTREAM_CHANGED, "Tijori's embedded financial data isn't valid."
         ) from exc
     if not isinstance(tables, dict):
-        raise TearsheetError(ErrorCode.UPSTREAM_CHANGED, "Tijori's financial data changed shape.")
+        raise ToolFailure(ErrorCode.UPSTREAM_CHANGED, "Tijori's financial data changed shape.")
     return tables
 
 
@@ -156,7 +156,7 @@ def _parse_month(label: str) -> date:
     try:
         return datetime.strptime(label, "%b %Y").date()
     except ValueError as exc:
-        raise TearsheetError(
+        raise ToolFailure(
             ErrorCode.UPSTREAM_CHANGED, f"Tijori's period label {label!r} isn't a month and year."
         ) from exc
 
@@ -275,7 +275,7 @@ def build_statement(
         other: Basis = "standalone" if basis == "consolidated" else "consolidated"
         table = tables.get(_table_key(statement, other, detail))
         if not _has_figures(table):
-            raise TearsheetError(
+            raise ToolFailure(
                 ErrorCode.NOT_FOUND, f"Tijori has no {statement.replace('_', ' ')} data for this."
             )
         warnings.append(f"No {basis} figures exist, so these are {other}.")
@@ -343,7 +343,7 @@ def parse_fund_flow(body: Any, periods: int) -> ParsedStatement:
     """
     parts = body.get("data") if isinstance(body, dict) else None
     if not isinstance(parts, list) or not parts:
-        raise TearsheetError(ErrorCode.UPSTREAM_CHANGED, "Tijori's fund flow data changed shape.")
+        raise ToolFailure(ErrorCode.UPSTREAM_CHANGED, "Tijori's fund flow data changed shape.")
     windows = [w for w in FUND_FLOW_WINDOWS if any(w in (p.get("data") or {}) for p in parts)][
         :periods
     ]
@@ -363,7 +363,7 @@ def parse_fund_flow(body: Any, periods: int) -> ParsedStatement:
                 values.append(_number(match.get("y")) if match else None)
             rows.append(FinancialRow(name=str(name), group=group, unit="crore", values=values))
     if not rows:
-        raise TearsheetError(ErrorCode.NOT_FOUND, "Tijori has no fund flow data for this company.")
+        raise ToolFailure(ErrorCode.NOT_FOUND, "Tijori has no fund flow data for this company.")
     return ParsedStatement(
         FinancialStatement(
             statement="fund_flow",

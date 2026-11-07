@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from tearsheet.core.errors import ErrorCode, TearsheetError
+from tearsheet.core.errors import ErrorCode, ToolFailure
 from tearsheet.sources.tijori.company_page import (
     operating_metric_list,
     parse_business_mix,
@@ -155,7 +155,7 @@ def test_paid_features_count_as_locked_unless_clearly_unlocked(locks, plan, expe
 
 
 def test_missing_core_data_is_a_changed_site():
-    with pytest.raises(TearsheetError) as caught:
+    with pytest.raises(ToolFailure) as caught:
         parse_company_page(block("ratios_table", []))
     assert caught.value.code is ErrorCode.UPSTREAM_CHANGED
 

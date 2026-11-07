@@ -10,7 +10,7 @@ from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 
 from tearsheet.core.cache import Cache
-from tearsheet.core.errors import ErrorCode, TearsheetError
+from tearsheet.core.errors import ErrorCode, ToolFailure
 from tearsheet.sources.filings.files import list_filings, resolve_filing
 from tearsheet.sources.filings.pdf import page_texts, search_pdf
 from tearsheet.sources.filings.xbrl import read_xbrl
@@ -56,7 +56,7 @@ def test_reading_outside_the_folder_or_odd_files_is_refused(folder, tmp_path, na
     (tmp_path / "secret.pdf").write_bytes(pdf(["secret"]))
     os.symlink(tmp_path / "secret.pdf", folder / "link.pdf")
     add(folder, "notes.txt", "x")
-    with pytest.raises(TearsheetError) as caught:
+    with pytest.raises(ToolFailure) as caught:
         resolve_filing(folder, name)
     assert caught.value.code in (ErrorCode.INVALID_INPUT, ErrorCode.NOT_FOUND)
 
@@ -96,7 +96,7 @@ def test_xml_entity_attacks_are_refused(folder):
         '<?xml version="1.0"?><!DOCTYPE x [<!ENTITY a "aaaaaaaaaa">'
         '<!ENTITY b "&a;&a;&a;&a;&a;&a;&a;&a;&a;&a;">]><x>&b;</x>'
     )
-    with pytest.raises(TearsheetError) as caught:
+    with pytest.raises(ToolFailure) as caught:
         read_xbrl(add(folder, "bomb.xml", bomb))
     assert caught.value.code is ErrorCode.INVALID_INPUT
 
@@ -108,7 +108,7 @@ def test_pdf_search_and_page_ranges(folder):
 
 
 def test_a_damaged_pdf_is_a_clear_error(folder):
-    with pytest.raises(TearsheetError):
+    with pytest.raises(ToolFailure):
         search_pdf(add(folder, "broken.pdf", b"%PDF-1.4 nonsense"), "x", 5)
 
 
@@ -273,6 +273,6 @@ def test_reconcile_rejects_a_period_that_is_not_a_quarter_label(folder, tmp_path
 
 def test_an_absolute_path_is_refused_even_inside_the_folder(folder):
     inside = add(folder, "a.pdf", pdf(["x"]))
-    with pytest.raises(TearsheetError) as caught:
+    with pytest.raises(ToolFailure) as caught:
         resolve_filing(folder, str(inside))
     assert caught.value.code is ErrorCode.INVALID_INPUT

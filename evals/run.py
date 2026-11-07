@@ -1,11 +1,11 @@
-"""Run the analyst tasks against Tearsheet with a real agent and score them.
+"""Run the analyst tasks against tearsheet with a real agent and score them.
 
 Usage:
     uv run python evals/run.py --split tuning
     uv run python evals/run.py --tasks t-id-01,t-fin-01
     uv run python evals/run.py --validate
 
-Each task is one headless Claude Code session with only Tearsheet connected,
+Each task is one headless Claude Code session with only tearsheet connected,
 so running tasks costs money. Results go to .local/evals, which is gitignored.
 
 Scoring follows a simple rule: check the exact first tool before trusting

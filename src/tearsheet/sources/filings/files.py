@@ -1,13 +1,13 @@
 """Safe access to the user's filings folder.
 
-Filings are files the user downloaded by hand. Tearsheet never fetches them,
+Filings are files the user downloaded by hand. tearsheet never fetches them,
 because the exchanges prohibit automated collection. Only files inside the
 folder can be read, whatever path an agent asks for.
 """
 
 from pathlib import Path
 
-from tearsheet.core.errors import ErrorCode, TearsheetError
+from tearsheet.core.errors import ErrorCode, ToolFailure
 
 XBRL_SUFFIXES = {".xml", ".xbrl"}
 PDF_SUFFIXES = {".pdf"}
@@ -38,17 +38,17 @@ def list_filings(folder: Path) -> list[Path]:
 def resolve_filing(folder: Path, name: str) -> Path:
     """Turn a name an agent gives back into a file, refusing anything outside the folder."""
     if not name or Path(name).is_absolute():
-        raise TearsheetError(ErrorCode.INVALID_INPUT, "Give a filing name from search_filings.")
+        raise ToolFailure(ErrorCode.INVALID_INPUT, "Give a filing name from search_filings.")
     root = folder.resolve()
     path = (root / name).resolve()
     if not path.is_relative_to(root):
-        raise TearsheetError(ErrorCode.INVALID_INPUT, "That path is outside the filings folder.")
+        raise ToolFailure(ErrorCode.INVALID_INPUT, "That path is outside the filings folder.")
     if not path.is_file():
-        raise TearsheetError(ErrorCode.NOT_FOUND, f"No filing called {name!r}.")
+        raise ToolFailure(ErrorCode.NOT_FOUND, f"No filing called {name!r}.")
     if path.suffix.lower() not in XBRL_SUFFIXES | PDF_SUFFIXES:
-        raise TearsheetError(ErrorCode.INVALID_INPUT, "Only XBRL and PDF filings can be read.")
+        raise ToolFailure(ErrorCode.INVALID_INPUT, "Only XBRL and PDF filings can be read.")
     if path.stat().st_size > MAX_FILE_BYTES:
-        raise TearsheetError(ErrorCode.INVALID_INPUT, "That filing is too large to read.")
+        raise ToolFailure(ErrorCode.INVALID_INPUT, "That filing is too large to read.")
     return path
 
 

@@ -11,7 +11,7 @@ from typing import Literal
 from mcp_types import CallToolResult, TextContent
 from pydantic import BaseModel, Field
 
-from tearsheet.core.errors import ErrorCode, TearsheetError
+from tearsheet.core.errors import ErrorCode, ToolFailure
 
 # About 20,000 tokens, under the 25,000 Claude Code allows per tool result.
 MAX_RESULT_CHARS = 80_000
@@ -68,7 +68,7 @@ def to_result(envelope: Envelope) -> CallToolResult:
     }
     text = json.dumps(payload, separators=(",", ":"), ensure_ascii=False)
     if len(text) > MAX_RESULT_CHARS:
-        raise TearsheetError(
+        raise ToolFailure(
             ErrorCode.INVALID_INPUT,
             "That result is too large to return in one go.",
             hint="Ask for fewer periods, concise detail or a smaller limit.",

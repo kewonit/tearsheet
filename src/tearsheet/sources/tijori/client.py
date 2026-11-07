@@ -1,6 +1,6 @@
 """Requests to Tijori, made from inside a headless browser.
 
-Tijori refuses plain HTTP clients but serves an ordinary browser, so Tearsheet
+Tijori refuses plain HTTP clients but serves an ordinary browser, so tearsheet
 keeps one headless browser open. It doesn't disguise itself. Requests run from
 /robots.txt because real pages poll for live prices, and a page left open would
 keep contacting Tijori in the background.
@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from tearsheet.core.errors import ErrorCode, TearsheetError
+from tearsheet.core.errors import ErrorCode, ToolFailure
 from tearsheet.core.ratelimit import RateLimiter
 from tearsheet.core.session import SessionState, read_session_info
 
@@ -36,26 +36,24 @@ class Response:
         try:
             return json.loads(self.text)
         except ValueError as exc:
-            raise TearsheetError(
+            raise ToolFailure(
                 ErrorCode.UPSTREAM_CHANGED, "Tijori returned something other than JSON."
             ) from exc
 
 
 def _raise_for_refusal(status: int) -> None:
     if status == 401:
-        raise TearsheetError(
-            ErrorCode.SESSION_EXPIRED, "Tijori needs a sign-in.", hint=SIGN_IN_HINT
-        )
+        raise ToolFailure(ErrorCode.SESSION_EXPIRED, "Tijori needs a sign-in.", hint=SIGN_IN_HINT)
     if status == 403:
-        raise TearsheetError(
+        raise ToolFailure(
             ErrorCode.BLOCKED,
-            "Tijori refused the request, so Tearsheet has stopped.",
+            "Tijori refused the request, so tearsheet has stopped.",
             hint="Don't retry. Tell the user Tijori refused access.",
         )
     if status == 429:
-        raise TearsheetError(ErrorCode.RATE_LIMITED, "Tijori asked Tearsheet to slow down.")
+        raise ToolFailure(ErrorCode.RATE_LIMITED, "Tijori asked tearsheet to slow down.")
     if status in (502, 503, 504):
-        raise TearsheetError(ErrorCode.UPSTREAM_UNAVAILABLE, f"Tijori returned {status}.")
+        raise ToolFailure(ErrorCode.UPSTREAM_UNAVAILABLE, f"Tijori returned {status}.")
 
 
 class TijoriClient:
@@ -94,18 +92,18 @@ class TijoriClient:
         except PlaywrightError as exc:
             await self.close()
             if "Executable doesn't exist" in str(exc):
-                raise TearsheetError(
+                raise ToolFailure(
                     ErrorCode.SETUP_REQUIRED,
                     "Chromium isn't installed.",
                     hint="Ask the user to run: playwright install chromium",
                 ) from exc
-            raise TearsheetError(
+            raise ToolFailure(
                 ErrorCode.UPSTREAM_UNAVAILABLE, "The browser couldn't reach Tijori."
             ) from exc
         if response is not None:
             try:
                 _raise_for_refusal(response.status)
-            except TearsheetError:
+            except ToolFailure:
                 await self.close()
                 raise
         self._page = page
@@ -140,7 +138,7 @@ class TijoriClient:
                 result = await page.evaluate(_FETCH, path)
             except PlaywrightError as exc:
                 await self.close()
-                raise TearsheetError(
+                raise ToolFailure(
                     ErrorCode.UPSTREAM_UNAVAILABLE, "The browser lost contact with Tijori."
                 ) from exc
         _raise_for_refusal(result["status"])

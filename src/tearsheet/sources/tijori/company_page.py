@@ -1,7 +1,7 @@
-"""Read a company's overview page into the facts Tearsheet returns.
+"""Read a company's overview page into the facts tearsheet returns.
 
 Only facts are kept. Tijori's own commentary, such as its investment thesis and
-red or green flags, is left out: Tearsheet doesn't pass on advice, and that
+red or green flags, is left out: tearsheet doesn't pass on advice, and that
 text is Tijori's analysis rather than data.
 """
 
@@ -13,7 +13,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from tearsheet.core.errors import ErrorCode, TearsheetError
+from tearsheet.core.errors import ErrorCode, ToolFailure
 from tearsheet.sources.tijori.pages import (
     clean_text,
     date_from_epoch_ms,
@@ -95,7 +95,7 @@ class CompanyPage(BaseModel):
 
 
 def normalise_unit(unit: str) -> str:
-    """Map Tijori's unit labels to Tearsheet's. Unknown labels pass through unchanged."""
+    """Map Tijori's unit labels to tearsheet's. Unknown labels pass through unchanged."""
     cleaned = unit.strip()
     return _RATIO_UNITS.get(cleaned.lower(), cleaned or "as_reported")
 
@@ -193,9 +193,7 @@ def parse_company_page(html: str) -> CompanyPage:
             for item in ratios_table
         ]
     except (KeyError, TypeError) as exc:
-        raise TearsheetError(
-            ErrorCode.UPSTREAM_CHANGED, "Tijori's ratio data changed shape."
-        ) from exc
+        raise ToolFailure(ErrorCode.UPSTREAM_CHANGED, "Tijori's ratio data changed shape.") from exc
     price, price_date = _price(blocks)
     returns = blocks.get("price_returns") if isinstance(blocks.get("price_returns"), dict) else {}
     actions = (

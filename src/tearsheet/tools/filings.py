@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 from tearsheet.core import paths
 from tearsheet.core.cache import Cache
 from tearsheet.core.envelope import Envelope, Source, Verification, to_result
-from tearsheet.core.errors import ErrorCode, TearsheetError
+from tearsheet.core.errors import ErrorCode, ToolFailure
 from tearsheet.sources.filings.files import (
     PDF_SUFFIXES,
     XBRL_SUFFIXES,
@@ -95,7 +95,7 @@ def quarter_end(label: str) -> date:
     try:
         month = datetime.strptime(label.strip(), "%b %Y").date()
     except ValueError as exc:
-        raise TearsheetError(
+        raise ToolFailure(
             ErrorCode.INVALID_INPUT, f"{label!r} isn't a quarter like 'Sep 2026'."
         ) from exc
     return month.replace(day=calendar.monthrange(month.year, month.month)[1])
@@ -175,11 +175,11 @@ def verify_quarterly(
 def _parse_pages(text: str) -> tuple[int, int]:
     found = re.fullmatch(r"\s*(\d+)\s*(?:-\s*(\d+))?\s*", text or "")
     if not found:
-        raise TearsheetError(ErrorCode.INVALID_INPUT, "Pages look like '3' or '3-5'.")
+        raise ToolFailure(ErrorCode.INVALID_INPUT, "Pages look like '3' or '3-5'.")
     first = int(found.group(1))
     last = int(found.group(2) or first)
     if first < 1 or last < first:
-        raise TearsheetError(
+        raise ToolFailure(
             ErrorCode.INVALID_INPUT, "Pages start at 1, and the range must go forwards."
         )
     return first, last

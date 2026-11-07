@@ -1,11 +1,11 @@
-"""Where Tearsheet keeps its files. All of them sit outside the repository."""
+"""Where tearsheet keeps its files. All of them sit outside the repository."""
 
 import os
 from pathlib import Path
 
 
 def home_dir() -> Path:
-    """Return Tearsheet's private folder, creating it owner-only if needed."""
+    """Return tearsheet's private folder, creating it owner-only if needed."""
     override = os.environ.get("TEARSHEET_HOME")
     path = Path(override).expanduser() if override else Path.home() / ".tearsheet"
     path.mkdir(parents=True, exist_ok=True, mode=0o700)

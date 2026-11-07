@@ -6,7 +6,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
 
-from tearsheet.core.errors import ErrorCode, TearsheetError
+from tearsheet.core.errors import ErrorCode, ToolFailure
 from tearsheet.core.ratelimit import RateLimiter
 from tearsheet.sources.tijori.client import TijoriClient
 
@@ -72,7 +72,7 @@ def test_a_non_json_body_is_reported_as_a_changed_site(site, tmp_path):
     async def work(client):
         (await client.get("/page")).json()
 
-    with pytest.raises(TearsheetError) as caught:
+    with pytest.raises(ToolFailure) as caught:
         run(site, tmp_path, work)
     assert caught.value.code is ErrorCode.UPSTREAM_CHANGED
 
@@ -97,7 +97,7 @@ def test_refusals_become_errors_the_agent_can_act_on(site, tmp_path, path, code)
     async def work(client):
         await client.get(path)
 
-    with pytest.raises(TearsheetError) as caught:
+    with pytest.raises(ToolFailure) as caught:
         run(site, tmp_path, work)
     assert caught.value.code is code
 
@@ -106,7 +106,7 @@ def test_a_block_is_not_retried(site, tmp_path):
     async def work(client):
         await client.get("/forbidden")
 
-    with pytest.raises(TearsheetError):
+    with pytest.raises(ToolFailure):
         run(site, tmp_path, work)
     assert Handler.requests.count("/forbidden") == 1
 

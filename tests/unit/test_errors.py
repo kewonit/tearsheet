@@ -3,15 +3,15 @@ import json
 import pytest
 from mcp.server.mcpserver.exceptions import ToolError
 
-from tearsheet.core.errors import ErrorCode, TearsheetError
+from tearsheet.core.errors import ErrorCode, ToolFailure
 
 
 def test_is_a_tool_error_so_the_sdk_passes_the_message_through():
-    assert isinstance(TearsheetError(ErrorCode.NOT_FOUND, "x"), ToolError)
+    assert isinstance(ToolFailure(ErrorCode.NOT_FOUND, "x"), ToolError)
 
 
 def test_message_is_compact_json_with_every_field():
-    error = TearsheetError(ErrorCode.SESSION_EXPIRED, "Session ended", hint="Run: tearsheet login")
+    error = ToolFailure(ErrorCode.SESSION_EXPIRED, "Session ended", hint="Run: tearsheet login")
     assert json.loads(str(error)) == {
         "code": "SESSION_EXPIRED",
         "message": "Session ended",
@@ -22,7 +22,7 @@ def test_message_is_compact_json_with_every_field():
 
 
 def test_hint_is_left_out_when_absent():
-    assert "hint" not in json.loads(str(TearsheetError(ErrorCode.NOT_FOUND, "x")))
+    assert "hint" not in json.loads(str(ToolFailure(ErrorCode.NOT_FOUND, "x")))
 
 
 @pytest.mark.parametrize(
@@ -36,4 +36,4 @@ def test_hint_is_left_out_when_absent():
     ],
 )
 def test_retry_decision_follows_the_code(code, retryable):
-    assert TearsheetError(code, "x").retryable is retryable
+    assert ToolFailure(code, "x").retryable is retryable

@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from tearsheet.core.errors import ErrorCode, TearsheetError
+from tearsheet.core.errors import ErrorCode, ToolFailure
 from tearsheet.sources.tijori.financials import (
     build_statement,
     parse_fund_flow,
@@ -48,7 +48,7 @@ def test_reads_the_embedded_data_wherever_it_sits_in_the_page():
     ],
 )
 def test_a_missing_or_broken_data_block_is_reported_as_a_changed_site(html):
-    with pytest.raises(TearsheetError) as caught:
+    with pytest.raises(ToolFailure) as caught:
         parse_tables(html)
     assert caught.value.code is ErrorCode.UPSTREAM_CHANGED
 
@@ -69,7 +69,7 @@ def test_falls_back_to_the_other_basis_and_says_so():
 
 
 def test_no_data_on_either_basis_is_not_found():
-    with pytest.raises(TearsheetError) as caught:
+    with pytest.raises(ToolFailure) as caught:
         build_statement({}, statement="cash_flow")
     assert caught.value.code is ErrorCode.NOT_FOUND
 
@@ -207,7 +207,7 @@ def test_text_numbers_are_read_and_nonsense_becomes_blank():
 
 def test_an_unreadable_period_label_is_reported_as_a_changed_site():
     tables = {"pl_c_s": table(["FY25", "FY26"], [row("Sales", [1, 2])])}
-    with pytest.raises(TearsheetError) as caught:
+    with pytest.raises(ToolFailure) as caught:
         build_statement(tables, statement="income")
     assert caught.value.code is ErrorCode.UPSTREAM_CHANGED
 

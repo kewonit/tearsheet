@@ -6,7 +6,7 @@ import json
 import pytest
 
 from tearsheet.core.cache import Cache
-from tearsheet.core.errors import ErrorCode, TearsheetError
+from tearsheet.core.errors import ErrorCode, ToolFailure
 from tearsheet.sources.tijori.client import Response
 from tearsheet.sources.tijori.companies import (
     Company,
@@ -126,14 +126,14 @@ def test_a_blank_query_finds_nothing_without_asking_tijori(cache, query):
 
 
 def test_an_empty_index_is_a_changed_site_and_is_not_cached(cache):
-    with pytest.raises(TearsheetError) as caught:
+    with pytest.raises(ToolFailure) as caught:
         asyncio.run(load_index(FakeClient(), cache))
     assert caught.value.code is ErrorCode.UPSTREAM_CHANGED
     assert cache.get("companies", "index") is None
 
 
 def test_rows_missing_a_field_are_a_changed_site(cache):
-    with pytest.raises(TearsheetError) as caught:
+    with pytest.raises(ToolFailure) as caught:
         asyncio.run(load_index(FakeClient(main=[{"name": "No Slug"}]), cache))
     assert caught.value.code is ErrorCode.UPSTREAM_CHANGED
 
@@ -161,7 +161,7 @@ def test_find_one_returns_a_single_match(cache):
 
 
 def test_find_one_reports_nothing_found(cache):
-    with pytest.raises(TearsheetError) as caught:
+    with pytest.raises(ToolFailure) as caught:
         asyncio.run(find_one(FakeClient(main=[screen_row()]), cache, "zzzz"))
     assert caught.value.code is ErrorCode.NOT_FOUND
 
@@ -171,7 +171,7 @@ def test_find_one_lists_the_options_when_ambiguous(cache):
         screen_row("Acme One", "acme-one", 1, "ONE"),
         screen_row("Acme Two", "acme-two", 2, "TWO"),
     ]
-    with pytest.raises(TearsheetError) as caught:
+    with pytest.raises(ToolFailure) as caught:
         asyncio.run(find_one(FakeClient(main=rows), cache, "Acme"))
     assert caught.value.code is ErrorCode.INVALID_INPUT
     assert "ONE" in caught.value.message and "TWO" in caught.value.message

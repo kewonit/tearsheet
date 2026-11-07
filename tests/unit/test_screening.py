@@ -9,7 +9,7 @@ from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 
 from tearsheet.core.cache import Cache
-from tearsheet.core.errors import ErrorCode, TearsheetError
+from tearsheet.core.errors import ErrorCode, ToolFailure
 from tearsheet.sources.tijori.catalogue import Field, check_query, search_fields
 from tearsheet.sources.tijori.client import Response
 from tearsheet.tools import screening
@@ -109,7 +109,7 @@ def test_a_query_naming_real_fields_passes():
 
 
 def test_an_unknown_field_is_named_with_suggestions():
-    with pytest.raises(TearsheetError) as caught:
+    with pytest.raises(ToolFailure) as caught:
         check_query("Market Cap > 5 AND Reeco > 1", FIELDS)
     assert caught.value.code is ErrorCode.INVALID_INPUT
     assert "'Market Cap'" in caught.value.message
@@ -220,14 +220,14 @@ def test_field_names_containing_and_or_are_not_split():
     check_query(
         "Depreciation and Amortization > 0 AND Research or Development < 5 or ROCE > 1", fields
     )
-    with pytest.raises(TearsheetError):
+    with pytest.raises(ToolFailure):
         check_query("Depreciation > 0", fields)
 
 
 def test_a_longer_field_name_wins_over_a_shorter_one_inside_it():
     fields = [*FIELDS, Field(name="Net Sales Growth", unit="x", period="y")]
     check_query("Net Sales Growth > 5", fields)
-    with pytest.raises(TearsheetError):
+    with pytest.raises(ToolFailure):
         check_query("Net Sales Grow > 5", fields)
 
 

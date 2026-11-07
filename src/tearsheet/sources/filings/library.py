@@ -4,7 +4,7 @@ import re
 from datetime import date
 from pathlib import Path
 
-from tearsheet.core.errors import TearsheetError
+from tearsheet.core.errors import ToolFailure
 from tearsheet.sources.filings.files import PDF_SUFFIXES, XBRL_SUFFIXES, list_filings
 from tearsheet.sources.filings.xbrl import XbrlFiling, read_xbrl
 
@@ -18,7 +18,7 @@ def parsed_xbrl(path: Path) -> XbrlFiling | None:
     if key not in _PARSED:
         try:
             _PARSED[key] = read_xbrl(path)
-        except TearsheetError:
+        except ToolFailure:
             _PARSED[key] = None
     return _PARSED[key]
 

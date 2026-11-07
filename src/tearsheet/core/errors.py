@@ -2,7 +2,7 @@
 
 The MCP SDK hides the message of any exception that isn't a ToolError, so
 agents would only see "Error executing tool X". Every expected failure uses
-TearsheetError so the agent gets a code, a retry decision and a next step.
+ToolFailure so the agent gets a code, a retry decision and a next step.
 """
 
 import json
@@ -24,12 +24,12 @@ class ErrorCode(StrEnum):
     PLAN_REQUIRED = "PLAN_REQUIRED"
 
 
-# BLOCKED is deliberately not retryable: Tearsheet stops rather than working
+# BLOCKED is deliberately not retryable: tearsheet stops rather than working
 # around an upstream refusal. See docs/DATA-USE.md.
 _RETRYABLE = {ErrorCode.RATE_LIMITED, ErrorCode.UPSTREAM_UNAVAILABLE}
 
 
-class TearsheetError(ToolError):
+class ToolFailure(ToolError):
     """An expected failure, serialised as compact JSON for the agent to read."""
 
     def __init__(self, code: ErrorCode, message: str, *, hint: str | None = None) -> None:

@@ -13,7 +13,7 @@ from urllib.parse import quote
 from pydantic import BaseModel, ValidationError
 
 from tearsheet.core.cache import Cache
-from tearsheet.core.errors import ErrorCode, TearsheetError
+from tearsheet.core.errors import ErrorCode, ToolFailure
 from tearsheet.sources.tijori.client import Response
 from tearsheet.sources.tijori.screener import run_screen
 
@@ -65,11 +65,11 @@ async def load_index(client: Client, cache: Cache) -> list[Company]:
             rows = await run_screen(client, financial=WHOLE_MARKET, sme=sme)
             companies += [_from_row(row, market) for row in rows]
     except (KeyError, ValidationError) as exc:
-        raise TearsheetError(
+        raise ToolFailure(
             ErrorCode.UPSTREAM_CHANGED, "Tijori's screener rows changed shape."
         ) from exc
     if not companies:
-        raise TearsheetError(ErrorCode.UPSTREAM_CHANGED, "Tijori's screener returned no companies.")
+        raise ToolFailure(ErrorCode.UPSTREAM_CHANGED, "Tijori's screener returned no companies.")
     # Companies that moved from SME to the main board appear in both screens.
     unique: dict[str, Company] = {}
     for company in companies:
@@ -121,7 +121,7 @@ async def search_by_name(client: Client, query: str, companies: list[Company]) -
     response = await client.get(f"/api/v1/ind/company_search/?q={quote(query)}")
     results = response.json()
     if not isinstance(results, list):
-        raise TearsheetError(ErrorCode.UPSTREAM_CHANGED, "Tijori's search response changed.")
+        raise ToolFailure(ErrorCode.UPSTREAM_CHANGED, "Tijori's search response changed.")
     known = {company.slug: company for company in companies}
     matches = []
     for item in results:
@@ -142,7 +142,7 @@ async def find_one(client: Client, cache: Cache, query: str) -> Match:
     """Return exactly one company, or an error saying how to narrow it down."""
     matches = await find(client, cache, query)
     if not matches:
-        raise TearsheetError(
+        raise ToolFailure(
             ErrorCode.NOT_FOUND,
             f"No company matched {query!r}.",
             hint="Try the company's name, or its BSE code.",
@@ -151,7 +151,7 @@ async def find_one(client: Client, cache: Cache, query: str) -> Match:
         options = ", ".join(
             f"{m.company.name} ({m.company.nse or m.company.slug})" for m in matches
         )
-        raise TearsheetError(
+        raise ToolFailure(
             ErrorCode.INVALID_INPUT,
             f"{query!r} matches more than one company: {options}.",
             hint="Use the exact NSE symbol or slug.",
