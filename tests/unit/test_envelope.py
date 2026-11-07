@@ -63,3 +63,14 @@ def test_blanks_inside_the_data_are_kept_so_the_result_matches_its_schema():
     payload = to_result(envelope).structured_content
     assert payload["data"] == {"required_but_blank": None, "figure": None}
     Envelope[WithBlank].model_validate(payload)
+
+
+def test_an_oversized_result_is_refused_with_a_way_forward():
+    import pytest
+
+    from tearsheet.core.envelope import MAX_RESULT_CHARS
+    from tearsheet.core.errors import TearsheetError
+
+    with pytest.raises(TearsheetError) as caught:
+        to_result(Envelope[str](data="x" * MAX_RESULT_CHARS))
+    assert "fewer periods" in caught.value.hint

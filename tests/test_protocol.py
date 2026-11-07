@@ -155,3 +155,8 @@ def test_stdout_carries_only_protocol_messages(server):
         leftovers.append(server.lines.get())
     for line in leftovers:
         json.loads(line)
+
+
+def test_prompts_are_listed(server):
+    names = [p["name"] for p in server.request("prompts/list")["result"]["prompts"]]
+    assert names == ["earnings_review", "peer_comparison", "thesis_check"]

@@ -10,7 +10,7 @@ from mcp.server.mcpserver import MCPServer
 from mcp_types import ToolAnnotations
 from pydantic import BaseModel
 
-from tearsheet import __version__
+from tearsheet import __version__, prompts
 from tearsheet.core import paths
 from tearsheet.core.cache import Cache
 from tearsheet.core.envelope import Envelope, to_result
@@ -109,6 +109,7 @@ def build_server() -> MCPServer:
     compare.register(server, client=client, cache=cache, read_only=READ_ONLY)
     markets.register(server, client=client, cache=cache, read_only=READ_ONLY)
     filings.register(server, client=client, cache=cache, read_only=READ_ONLY)
+    prompts.register(server)
 
     @server.tool(annotations=READ_ONLY)
     def server_status() -> Envelope[ServerStatus]:
