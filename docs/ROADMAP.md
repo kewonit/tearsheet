@@ -15,7 +15,6 @@ Nothing below is worth building until this works.
 - [ ] Run sign-in against the real site and confirm the session cookie is what we expect
 - [ ] Find out which Tijori pages and data still work as documented
 - [ ] Decide whether requests need a browser, or plain HTTP with the session is enough
-- [ ] Hear back from Tijori about API access and this project
 
 ## Then
 
