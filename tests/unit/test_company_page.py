@@ -191,3 +191,41 @@ def test_business_mix_reads_charts_and_dated_market_shares():
     assert [(s.name, s.value, s.unit, s.as_of) for s in shares] == [
         ("Widgets", 12.5, "percent", "May 2023")
     ]
+
+
+MS_CHARTS = [
+    {
+        "name": "Widgets - Market Share",
+        "id": 7,
+        "data": [[1767225600000, 12.0], [1740787200000, 11.0]],
+        "latest_value": 12.0,
+        "latest_date": "Jan 26",
+        "unit": "%",
+        "source": "https://example.com/made-up-source.pdf",
+        "methodology": None,
+        "sample_size": None,
+    }
+]
+
+
+def test_market_share_comes_from_embedded_chart_data_without_history_on_free():
+    from tearsheet.sources.tijori.company_page import parse_market_share
+
+    shares = parse_market_share(block("ms-charts", MS_CHARTS), include_history=False)
+    assert [(s.name, s.value, s.unit, s.as_of, s.history) for s in shares] == [
+        ("Widgets", 12.0, "percent", "Jan 2026", None)
+    ]
+    assert "made-up-source" not in shares[0].model_dump_json()
+
+
+def test_market_share_history_is_month_labelled_in_date_order_when_unlocked():
+    from tearsheet.sources.tijori.company_page import parse_market_share
+
+    shares = parse_market_share(block("ms-charts", MS_CHARTS), include_history=True)
+    assert shares[0].history == [("Mar 2025", 11.0), ("Jan 2026", 12.0)]
+
+
+def test_a_page_without_chart_data_falls_back_to_the_cards():
+    from tearsheet.sources.tijori.company_page import parse_market_share
+
+    assert parse_market_share("<html></html>", include_history=True) is None

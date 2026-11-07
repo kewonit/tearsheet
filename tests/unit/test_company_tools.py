@@ -158,3 +158,28 @@ def test_revenue_mix_history_is_kept_in_date_order(cache, monkeypatch):
         "Mar 2025",
         "Jan 2026",
     ]
+
+
+def test_free_plan_market_share_has_no_history_in_the_result_or_the_cache(cache):
+    from tests.unit.test_company_page import MS_CHARTS
+
+    html = FREE + block("ms-charts", MS_CHARTS)
+    result, _ = call(html, cache, "get_business_mix")
+    share = result["data"]["market_share"][0]
+    assert (share["value"], share["as_of"], share["history"]) == (12.0, "Jan 2026", None)
+    assert any("Market share history needs a paid" in w for w in result["warnings"])
+    cached = cache.get("company_pages", "acme").value["market_share"][0]
+    assert cached["history"] is None
+
+
+def test_paid_plan_market_share_includes_history(cache):
+    from tests.unit.test_company_page import MS_CHARTS
+
+    paid = page(
+        locks={"market_share": {"historic": True}},
+        plan={"plan_tier": "premium"},
+        extra=METRICS + MIX + block("ms-charts", MS_CHARTS),
+    )
+    result, _ = call(paid, cache, "get_business_mix")
+    assert result["data"]["market_share"][0]["history"] == [["Mar 2025", 11.0], ["Jan 2026", 12.0]]
+    assert not any("Market share history" in w for w in result["warnings"])

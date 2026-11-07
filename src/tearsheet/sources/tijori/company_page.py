@@ -294,6 +294,7 @@ class ShareFigure(BaseModel):
     value: float | None
     unit: str
     as_of: str | None
+    history: list[tuple[str, float | None]] | None = None
 
 
 class _BusinessMixReader(HTMLParser):
@@ -381,3 +382,40 @@ def parse_business_mix(html: str) -> tuple[list[MixChart], list[ShareFigure]]:
         if card["name"]
     ]
     return charts, shares
+
+
+def parse_market_share(html: str, *, include_history: bool) -> list[ShareFigure] | None:
+    """Read market shares from the page's embedded chart data.
+
+    Every page carries the full series, and Tijori's free plan hides it behind
+    locked axes. History is kept only when the plan unlocks it, and source
+    links are always left out. Returns None when the page has no chart data,
+    so the caller can fall back to the visible cards.
+    """
+    charts = json_blocks(html).get("ms-charts")
+    if not isinstance(charts, list):
+        return None
+    shares = []
+    for chart in charts:
+        if not isinstance(chart, dict) or not chart.get("name"):
+            continue
+        history = None
+        if include_history:
+            dated = sorted(
+                (day, number(value))
+                for stamp, value in (
+                    p for p in chart.get("data") or [] if isinstance(p, list) and len(p) == 2
+                )
+                if (day := date_from_epoch_ms(stamp)) is not None
+            )
+            history = [(day.strftime("%b %Y"), value) for day, value in dated]
+        shares.append(
+            ShareFigure(
+                name=clean_text(str(chart["name"]).replace(" - Market Share", ""), 120),
+                value=number(chart.get("latest_value")),
+                unit=normalise_unit(str(chart.get("unit") or "")),
+                as_of=month_label(str(chart.get("latest_date") or "")),
+                history=history,
+            )
+        )
+    return shares

@@ -24,6 +24,7 @@ from tearsheet.sources.tijori.company_page import (
     operating_metric_list,
     parse_business_mix,
     parse_company_page,
+    parse_market_share,
 )
 from tearsheet.sources.tijori.ownership import Ownership, parse_shareholding
 from tearsheet.sources.tijori.pages import date_from_epoch_ms, number
@@ -61,9 +62,12 @@ async def load_company(
     entry = cache.get("company_pages", slug)
     if entry is None:
         html = await _fetch(client, f"/company/{slug}/")
-        charts, shares = parse_business_mix(html)
+        page = parse_company_page(html)
+        charts, cards = parse_business_mix(html)
+        embedded = parse_market_share(html, include_history=page.entitlements.market_share_history)
+        shares = cards if embedded is None else embedded
         data = CompanyData(
-            page=parse_company_page(html),
+            page=page,
             metrics=operating_metric_list(html),
             revenue_mix=charts,
             market_share=shares,
@@ -305,6 +309,10 @@ def register(server: MCPServer, *, client: TijoriClient, cache: Cache, read_only
         elif data.revenue_mix:
             warnings.append(
                 "Revenue mix history needs a paid Tijori plan, so only the latest split is shown."
+            )
+        if data.market_share and not data.page.entitlements.market_share_history:
+            warnings.append(
+                "Market share history needs a paid Tijori plan, so only the latest value is shown."
             )
         if not data.revenue_mix and not data.market_share:
             warnings.append("Tijori has no business mix or market share data for this company.")
