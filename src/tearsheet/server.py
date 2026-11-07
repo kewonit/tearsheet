@@ -16,7 +16,7 @@ from tearsheet.core.cache import Cache
 from tearsheet.core.envelope import Envelope, to_result
 from tearsheet.core.session import SessionState, read_session_info
 from tearsheet.sources.tijori.client import TijoriClient
-from tearsheet.tools import companies
+from tearsheet.tools import companies, financials
 
 INSTRUCTIONS = (
     "Tearsheet gives facts and calculations for researching Indian listed companies, "
@@ -103,6 +103,7 @@ def build_server() -> MCPServer:
     )
     cache = Cache(paths.cache_path())
     companies.register(server, client=client, cache=cache, read_only=READ_ONLY)
+    financials.register(server, client=client, cache=cache, read_only=READ_ONLY)
 
     @server.tool(annotations=READ_ONLY)
     def server_status() -> Envelope[ServerStatus]:

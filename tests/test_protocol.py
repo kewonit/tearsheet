@@ -86,6 +86,7 @@ def test_tool_list_is_stable_cacheable_and_read_only(server):
     second = server.request("tools/list")["result"]
     assert [t["name"] for t in first["tools"]] == [
         "find_company",
+        "get_financials",
         "server_status",
     ]
     assert first["tools"] == second["tools"]
