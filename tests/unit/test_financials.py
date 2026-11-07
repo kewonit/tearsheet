@@ -207,9 +207,50 @@ def test_an_unreadable_period_label_is_reported_as_a_changed_site():
     assert caught.value.code is ErrorCode.UPSTREAM_CHANGED
 
 
+def test_a_cash_flow_column_off_the_year_end_is_interim_and_explained():
+    tables = {"cf_c": table(["Mar 2024", "Mar 2025", "Sep 2025"], [row("Net Cash", [1, 2, 3])])}
+    parsed = build_statement(tables, statement="cash_flow")
+    assert parsed.statement.periods[-1] == "Interim Sep 2025"
+    assert "doesn't say what period it covers" in parsed.warnings[0]
+
+
+def test_a_balance_sheet_off_the_year_end_keeps_its_date_because_it_is_a_point_in_time():
+    tables = {"bs_c_s": table(["Mar 2025", "Sep 2025"], [row("Assets", [1, 2])])}
+    parsed = build_statement(tables, statement="balance_sheet")
+    assert parsed.statement.periods == ["Mar 2025", "Sep 2025"]
+    assert parsed.warnings == []
+
+
+def test_row_names_lose_upstream_underscores():
+    tables = {"pl_c_s": table(YEARS, [row("Operating_expenses", [1, 2, 3])])}
+    assert (
+        build_statement(tables, statement="income").statement.rows[0].name == "Operating expenses"
+    )
+
+
+def test_rows_in_a_ratio_section_are_never_assumed_to_be_money():
+    children = [row("Gross NPA", [1.1, 1.2, 1.3]), row("CASA Ratio", [30, 31, 32])]
+    tables = {"qt_c": table(YEARS, [row("Quarterly Ratios", [0, 0, 0], children)])}
+    rows = build_statement(tables, statement="quarterly", detail="full").statement.rows
+    assert {r.name: r.unit for r in rows} == {
+        "Gross NPA": "as_reported",
+        "CASA Ratio": "as_reported",
+    }
+
+
 @pytest.mark.parametrize(
     ("name", "statement", "unit"),
     [
+        ("General and Administration Expenses", "income", "crore"),
+        ("Provisions and Contingencies", "quarterly", "crore"),
+        ("Cost To Income Ratio", "ratios", "as_reported"),
+        ("EPS(Rs)", "ratios", "rupees_per_share"),
+        ("Free Cash Flow per Share(Rs)", "ratios", "rupees_per_share"),
+        ("Debt to Equity", "ratios", "multiple"),
+        ("Price to Earnings", "ratios", "multiple"),
+        ("Price/Free Cash Flow", "ratios", "multiple"),
+        ("Number of Branches", "ratios", "as_reported"),
+        ("Sales per Branch (Crs)", "ratios", "crore"),
         ("Sales", "income", "crore"),
         ("OPM (%)", "income", "percent"),
         ("Dividend Payout Ratio(%)", "income", "percent"),

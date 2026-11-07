@@ -20,7 +20,7 @@ from tearsheet.sources.tijori.financials import (
     build_statement,
     parse_tables,
 )
-from tearsheet.tools.companies import entity_for
+from tearsheet.tools.companies import CompanyQuery, entity_for
 
 FINANCIALS_TTL_S = 6 * 3600
 
@@ -39,7 +39,7 @@ async def load_tables(
         )
     tables = parse_tables(response.text)
     cache.put("financials", slug, tables, ttl_s=FINANCIALS_TTL_S)
-    return tables, datetime.now(UTC)
+    return tables, datetime.fromtimestamp(cache.get("financials", slug).fetched_at, UTC)
 
 
 def register(server: MCPServer, *, client: TijoriClient, cache: Cache, read_only: Any) -> None:
@@ -47,7 +47,7 @@ def register(server: MCPServer, *, client: TijoriClient, cache: Cache, read_only
 
     @tool
     async def get_financials(
-        company: str,
+        company: CompanyQuery,
         statement: Statement = "income",
         basis: Basis = "consolidated",
         detail: Detail = "concise",
@@ -57,12 +57,13 @@ def register(server: MCPServer, *, client: TijoriClient, cache: Cache, read_only
 
         Use for income statements, balance sheets, cash flow, quarterly results and
         ratios. Accepts an NSE symbol, BSE code or name. Every row states its own
-        unit, because statements mix crore, percent, days and multiples. A period
-        starting TTM is trailing twelve months, not a financial year, so don't
-        compare it directly with annual columns as if it were one. If the requested
-        basis doesn't exist, the other is returned with a warning. Set detail to
-        full for line items. Figures are as Tijori reports them and are unchecked
-        against filings.
+        unit, because statements mix crore, percent, days and multiples. A unit of
+        as_reported means the unit isn't known, so don't assume one. A period
+        starting TTM is trailing twelve months, and one starting Interim covers an
+        unstated period, so don't compare either directly with annual columns. A
+        blank value means no reliable figure exists. If the requested basis doesn't
+        exist, the other is returned with a warning. Set detail to full for line
+        items. Figures are as Tijori reports them and are unchecked against filings.
         """
         match = await find_one(client, cache, company)
         tables, fetched_at = await load_tables(client, cache, match.company.slug)

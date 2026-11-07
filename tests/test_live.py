@@ -136,3 +136,43 @@ def test_a_business_filter_really_narrows_the_results(tmp_path):
 
     wide, narrow = run(work, tmp_path)
     assert 0 < narrow < wide
+
+
+@pytest.mark.parametrize("symbol", COMPANIES)
+@pytest.mark.parametrize("basis", ["consolidated", "standalone"])
+def test_cash_flows_add_up_in_every_period(symbol, basis, cache, tmp_path):
+    tables = tables_for(symbol, cache, tmp_path)
+    flows = build_statement(tables, statement="cash_flow", basis=basis, periods=12).statement
+    parts = zip(
+        by_name(flows, "Cash from Operating Activity").values,
+        by_name(flows, "Cash from Investing Activity").values,
+        by_name(flows, "Cash from Financing Activity").values,
+        strict=True,
+    )
+    # A blank means no such activity was reported that year, so it adds nothing.
+    assert [sum(value or 0 for value in part) for part in parts] == pytest.approx(
+        by_name(flows, "Net Cash Flow").values, abs=TOLERANCE
+    )
+
+
+def test_bank_rows_keep_honest_units(cache, tmp_path):
+    tables = tables_for("HDFCBANK", cache, tmp_path)
+    rows = build_statement(tables, statement="quarterly", detail="full").statement.rows
+    units = {row.name: row.unit for row in rows}
+    assert units["General and Administration Expenses"] == "crore"
+    assert units["Gross NPA"] == "as_reported"
+    assert units["CASA Ratio"] == "as_reported"
+
+
+def test_an_off_year_end_cash_flow_column_is_labelled_interim(cache, tmp_path):
+    tables = tables_for("TCS", cache, tmp_path)
+    parsed = build_statement(tables, statement="cash_flow")
+    assert parsed.statement.periods[-1].startswith("Interim ")
+    assert parsed.warnings
+
+
+def test_no_symbol_is_ambiguous_because_a_company_moved_markets(cache, tmp_path):
+    async def work(client):
+        return await find(client, cache, "GCMCOMM")
+
+    assert len(run(work, tmp_path)) == 1

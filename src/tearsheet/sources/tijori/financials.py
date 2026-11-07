@@ -47,7 +47,24 @@ _CROSS_CHECKS = {
     "income": (("Net Profit", "Profit Before Tax"),),
     "quarterly": (("Net Profit", "Profit After Tax"), ("PBDT", "Profit Before Tax")),
 }
-_MULTIPLE_NAMES = re.compile(r"ratio|turnover|multiplier|^p/e$|price to book|ev/ebitda", re.I)
+# Only these are known to be multiples. Tijori calls some percentages "ratios",
+# such as CASA Ratio, so a name that merely sounds like a ratio isn't enough.
+_MULTIPLES = {
+    "asset turnover ratio",
+    "current ratio",
+    "debt to equity",
+    "debt to equity ratio",
+    "equity multiplier",
+    "ev/ebitda",
+    "fixed asset turnover",
+    "interest coverage ratio",
+    "p/e",
+    "price to book",
+    "price to book value",
+    "price to earnings",
+    "price/free cash flow",
+    "quick ratio",
+}
 
 
 class FinancialRow(BaseModel):
@@ -96,25 +113,27 @@ def _table_key(statement: str, basis: str, detail: str) -> str:
     return key
 
 
-def unit_for(name: str, statement: str) -> str:
+def unit_for(name: str, statement: str, group: str | None = None) -> str:
     """Work out a row's unit from its name.
 
-    Ratio tables have no default unit, so an unrecognised row there is marked
-    as_reported rather than assumed to be money.
+    Only rows outside ratio sections default to crore. Anything unrecognised
+    inside one is marked as_reported rather than given a unit it may not have.
     """
-    if "%" in name or "margin" in name.lower():
+    lowered = name.lower()
+    if "%" in name or "margin" in lowered:
         return "percent"
-    if "number of shares" in name.lower():
+    if "number of shares" in lowered:
         return "crore_shares"
-    if "(crs)" in name.lower():
+    if "(crs)" in lowered:
         return "crore"
-    if "eps" in name.lower().split():
+    if re.search(r"\beps\b|per share", lowered):
         return "rupees_per_share"
-    if re.search(r"\bdays\b|\bcycle\b", name, re.I):
+    if re.search(r"\bdays\b|\bcycle\b", lowered):
         return "days"
-    if _MULTIPLE_NAMES.search(name):
+    if lowered in _MULTIPLES:
         return "multiple"
-    return "as_reported" if statement == "ratios" else "crore"
+    in_ratio_section = statement == "ratios" or "ratio" in (group or "").lower()
+    return "as_reported" if in_ratio_section else "crore"
 
 
 def _number(value: Any) -> float | None:
@@ -147,12 +166,18 @@ def _months_between(earlier: date, later: date) -> int:
 
 
 def _label_periods(dates: list[str], statement: str) -> list[str]:
-    """Mark a final income column that doesn't follow the yearly pattern as TTM."""
+    """Mark a final column that breaks the yearly pattern.
+
+    Income columns like this are trailing twelve months, which Tijori's pages
+    state and its quarterly figures confirm. Cash flow columns look similar, but
+    Tijori doesn't say what they cover, so they only get called interim.
+    """
     labels = list(dates)
-    if statement != "income" or len(dates) < 2:
+    prefix = {"income": "TTM", "cash_flow": "Interim"}.get(statement)
+    if prefix is None or len(dates) < 2:
         return labels
     if _months_between(_parse_month(dates[-2]), _parse_month(dates[-1])) != 12:
-        labels[-1] = f"TTM {dates[-1]}"
+        labels[-1] = f"{prefix} {dates[-1]}"
     return labels
 
 
@@ -276,11 +301,16 @@ def build_statement(
     labels = [all_labels[index] for index in keep][-periods:]
     if labels[-1].startswith("TTM "):
         warnings += _lagging_ttm_warning(tables, basis, dates[-1])
+    if labels[-1].startswith("Interim "):
+        warnings.append(
+            f"The {dates[-1]} column isn't a financial year end, and Tijori doesn't "
+            "say what period it covers, so don't compare it directly with annual columns."
+        )
     rows = [
         FinancialRow(
-            name=row["name"],
+            name=row["name"].replace("_", " "),
             group=group,
-            unit=unit_for(row["name"], statement),
+            unit=unit_for(row["name"], statement, group),
             values=[_number(row["value"][index]) for index in keep][-periods:],
         )
         for group, row in flat
