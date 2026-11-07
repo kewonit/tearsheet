@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Filings
+
+- Checked against real integrated filings for a manufacturer, an NBFC, a bank and a life insurer, and a real annual report. The filing tools are no longer experimental.
+- Recognises the element names banks and life insurers use, and falls back to total profit when a filing gives 0 for profit attributable to owners.
+- Matching now allows only rounding differences. The old tolerance would have passed a ₹60 crore gap.
+- Quarterly verification also checks profit before tax, which surfaces Tijori's non-statutory figure for banks and insurers.
+- Filing values show money in crore with their period, and leave out breakdowns.
+- PDF search finds pages with every word of the query, ranking exact phrases first.
+
 ## 0.1.0 (2026-11-08)
 
 First release.

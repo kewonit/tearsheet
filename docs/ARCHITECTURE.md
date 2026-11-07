@@ -60,7 +60,16 @@ Company pages state the session's plan and which features it unlocks. tearsheet 
 
 ## Filings
 
-Filings are files the user downloads. Paths an agent supplies are resolved inside the filings folder and refused otherwise, including through symlinks. XML is parsed with defusedxml. XBRL elements are matched by local name, a quarter is chosen by its three-month context, and dimensioned breakdowns are never taken as totals. This part is experimental until it has been tested on real filings.
+Filings are files the user downloads. Paths an agent supplies are resolved inside the filings folder and refused otherwise, including through symlinks. XML is parsed with defusedxml.
+
+Real integrated filings, the format companies have used for results since 2025, taught these rules:
+
+- Elements are matched by local name. Templates differ: banks file `ProfitLossForThePeriod` and insurers `NetPremiumIncome`, so each figure has an ordered list of element names.
+- A second-quarter filing holds quarter and half-year figures, so a quarter is chosen by its three-month context, and every value shown states its period.
+- Money is filed in rupees and shown in crore. Breakdowns by segment are never taken as totals.
+- Many companies file profit attributable to owners as 0 when they have no minority holders. A zero there falls back to total profit, with a note.
+- Comparisons are with the statutory figure, never whichever element happens to match Tijori. Tijori rounds to two decimals, so a match must be within about ₹5 lakh.
+- PDF search needs every word on a page rather than the exact phrase, because reports rarely use a question's wording.
 
 ## How Tijori behaves
 

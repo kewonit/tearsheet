@@ -2,7 +2,7 @@
 
 tearsheet is a local [MCP](https://modelcontextprotocol.io) server that helps AI agents research Indian listed companies. It reads [Tijori Finance](https://www.tijorifinance.com) the way your browser does, and can check figures against filings you download yourself.
 
-> **Alpha.** The 11 Tijori tools are tested against the live site. The 3 filing tools are experimental and tested only on made-up filings. Sign-in hasn't been tested on Tijori itself yet.
+> **Alpha.** The Tijori tools are tested against the live site, and the filing tools against real filings. Sign-in hasn't been tested on Tijori itself yet.
 
 > tearsheet isn't affiliated with or endorsed by Tijori Financial Services, NSE or BSE. Read [how it uses data](docs/DATA-USE.md) before you use it.
 
@@ -32,9 +32,9 @@ Agents are good at reasoning about a company and bad at getting exact figures ri
 | `search_screen_fields` | Finds exact screener field names, with units |
 | `compare_companies` | Compares 2 to 6 companies, with growth and peer statistics calculated on the server |
 | `get_sector_view` | Market indices, sector indices and conglomerates, with their constituents |
-| `search_filings` | Searches filings you downloaded *(experimental)* |
-| `read_filing` | Reads pages or figures from one of those filings *(experimental)* |
-| `reconcile_figure` | Checks a quarterly figure against its filing *(experimental)* |
+| `search_filings` | Searches filings you downloaded |
+| `read_filing` | Reads pages or figures from one of those filings |
+| `reconcile_figure` | Checks a quarterly figure against its filing |
 | `server_status` | Reports the session, cache and filings folder |
 
 There are also three prompts: `earnings_review`, `peer_comparison` and `thesis_check`.
@@ -75,14 +75,18 @@ You don't need to sign in: every tool works from Tijori's public pages. If your 
 
 tearsheet only returns what your plan shows. On the free plan that means the latest value of operating metrics, revenue mix and market share, but not their history. See [DATA-USE.md](docs/DATA-USE.md) for why.
 
-## Filings (experimental)
+## Filings
 
-The exchanges prohibit automated collection, so tearsheet never downloads filings. Download them by hand and put them in `~/.tearsheet/filings`:
+The exchanges prohibit automated collection, so tearsheet never downloads filings. Download them yourself and put them in `~/.tearsheet/filings`:
 
-- **XBRL results filings** identify their own company, so any name works.
-- **PDFs**, such as annual reports and concall transcripts, go in a folder named after the NSE symbol or BSE code, such as `filings/NGLFINE/annual-report-2026.pdf`.
+- **Quarterly results as XBRL.** From 2025, these are on NSE under *Integrated Filing - Financials*. Each file names its own company, so any file name works.
+- **PDFs** such as annual reports and concall transcripts. Put these in a folder named after the NSE symbol or BSE code, such as `filings/NGLFINE/annual-report-2026.pdf`.
 
-`get_financials` then checks quarterly figures against matching filings, and `reconcile_figure` compares a single figure. This has been tested only on made-up filings so far.
+`get_financials` then checks quarterly revenue, profit before tax and net profit against any matching filing, and `reconcile_figure` compares one figure in detail.
+
+Checking real filings shows why this matters. Tijori's quarterly figures matched to within rounding for a manufacturer, an NBFC, a bank and a life insurer, but its profit before tax for the bank and the insurer wasn't the statutory figure. The bank's differs by its minority interest. Reconciliation reports those as mismatches with both figures.
+
+Templates other than these four, and results filed before 2025, haven't been tested.
 
 ## Where your data lives
 
