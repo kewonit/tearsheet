@@ -176,3 +176,51 @@ def test_no_symbol_is_ambiguous_because_a_company_moved_markets(cache, tmp_path)
         return await find(client, cache, "GCMCOMM")
 
     assert len(run(work, tmp_path)) == 1
+
+
+def page_data(symbol, cache, tmp_path):
+    from tearsheet.tools.company import load_company
+
+    async def work(client):
+        match = await find_one(client, cache, symbol)
+        return (await load_company(client, cache, match.company.slug))[0]
+
+    return run(work, tmp_path)
+
+
+@pytest.mark.parametrize("symbol", COMPANIES)
+def test_market_cap_is_price_times_shares(symbol, cache, tmp_path):
+    data = page_data(symbol, cache, tmp_path)
+    tables = tables_for(symbol, cache, tmp_path)
+    income = build_statement(tables, statement="income", periods=3).statement
+    # A TTM column has no share count, so use the latest year that has one.
+    counts = by_name(income, "Number of shares(Crs)").values
+    shares_crore = next(value for value in reversed(counts) if value is not None)
+    # Share counts are rounded to two decimals of a crore, hence the loose tolerance.
+    assert data.page.price * shares_crore == pytest.approx(data.page.market_cap_crore, rel=0.05)
+
+
+@pytest.mark.parametrize("symbol", [*COMPANIES, "HDFCBANK", "LICI"])
+def test_ownership_adds_up_to_one_hundred_percent(symbol, cache, tmp_path):
+    from tearsheet.sources.tijori.ownership import parse_shareholding
+
+    async def work(client):
+        match = await find_one(client, cache, symbol)
+        return (await client.get(f"/company/{match.company.slug}/shareholding/")).text
+
+    ownership = parse_shareholding(run(work, tmp_path), full=False, periods=4)
+    top = [row for row in ownership.rows if row.level == 1 and row.unit == "percent"]
+    for index in range(len(ownership.periods)):
+        assert sum(row.values[index] or 0 for row in top) == pytest.approx(100, abs=0.1)
+
+
+@pytest.mark.parametrize("symbol", [*COMPANIES, "HDFCBANK", "TCS"])
+def test_every_revenue_split_adds_up_to_one_hundred_percent(symbol, cache, tmp_path):
+    for chart in page_data(symbol, cache, tmp_path).revenue_mix:
+        assert sum(f.value or 0 for f in chart.latest) == pytest.approx(100, abs=1)
+
+
+def test_an_anonymous_session_has_no_paid_features(cache, tmp_path):
+    entitlements = page_data("NGLFINE", cache, tmp_path).page.entitlements
+    assert (entitlements.plan_tier, entitlements.metrics_history) == ("free", False)
+    assert (entitlements.revenue_mix_history, entitlements.market_share_history) == (False, False)
