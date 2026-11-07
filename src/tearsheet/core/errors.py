@@ -21,6 +21,7 @@ class ErrorCode(StrEnum):
     INVALID_INPUT = "INVALID_INPUT"
     NOT_FOUND = "NOT_FOUND"
     SETUP_REQUIRED = "SETUP_REQUIRED"
+    PLAN_REQUIRED = "PLAN_REQUIRED"
 
 
 # BLOCKED is deliberately not retryable: Tearsheet stops rather than working

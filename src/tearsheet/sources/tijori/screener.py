@@ -10,10 +10,13 @@ import re
 from typing import Any, Protocol
 from urllib.parse import urlencode
 
+from pydantic import BaseModel
+
 from tearsheet.core.errors import ErrorCode, TearsheetError
 from tearsheet.sources.tijori.client import Response
 
 SCREEN_PATH = "/api/filter_queries/advanced_search/"
+PRESET_PATH = "/api/filter_queries/popular-query/results/"
 
 
 class Client(Protocol):
@@ -49,8 +52,13 @@ async def run_screen(
     latest_results_only: bool = False,
     superstar_investors: bool = False,
     sme: bool = False,
+    preset_id: int | None = None,
 ) -> list[dict[str, Any]]:
-    """Run a screen and return its rows, with HTML removed from the keys."""
+    """Run a screen and return its rows, with HTML removed from the keys.
+
+    A preset runs through Tijori's preset endpoint, which is the only one
+    that applies a preset's business filter.
+    """
     params = {
         "financial": financial,
         "alternate": alternate,
@@ -58,17 +66,26 @@ async def run_screen(
         "whales": _flag(superstar_investors),
         "is_sme": _flag(sme),
         "columns": "",
-        "query_id": "null",
-        "source": "Basic",
+        "query_id": "null" if preset_id is None else str(preset_id),
+        "source": "Basic" if preset_id is None else "Popular",
     }
-    response = await client.get(f"{SCREEN_PATH}?{urlencode(params)}")
+    path = SCREEN_PATH if preset_id is None else PRESET_PATH
+    response = await client.get(f"{path}?{urlencode(params)}")
     body = response.json()
     if not isinstance(body, dict):
         raise TearsheetError(ErrorCode.UPSTREAM_CHANGED, "Tijori's screener response changed.")
     if response.status == 500 or body.get("error"):
+        detail = " ".join(str(body.get("error") or "").split())[:150]
+        reason = f" Tijori said: {detail}." if detail else ""
+        if preset_id is not None:
+            raise TearsheetError(
+                ErrorCode.UPSTREAM_CHANGED,
+                f"Tijori's own preset failed to run.{reason}",
+                hint="This is a fault in Tijori's preset. Try another preset or your own filters.",
+            )
         raise TearsheetError(
             ErrorCode.INVALID_INPUT,
-            "Tijori couldn't run that screen.",
+            f"Tijori couldn't run that screen.{reason}",
             hint="Field names must match Tijori's catalogue exactly.",
         )
     _require_applied("financial", financial, body.get("financial_q"))
@@ -77,3 +94,44 @@ async def run_screen(
     if response.status != 200 or not isinstance(rows, list):
         raise TearsheetError(ErrorCode.UPSTREAM_CHANGED, "Tijori's screener response changed.")
     return [{_clean_key(key): value for key, value in row.items()} for row in rows]
+
+
+PRESETS_PATH = "/api/filter_queries/popular-query/"
+
+
+class Preset(BaseModel):
+    preset_id: int
+    name: str
+    category: str
+    description: str
+    paid_only: bool
+    financial: str
+    business: str
+    superstar_investors: bool
+
+
+async def load_presets(client: Client) -> list[Preset]:
+    body = (await client.get(PRESETS_PATH)).json()
+    if not isinstance(body, dict):
+        raise TearsheetError(ErrorCode.UPSTREAM_CHANGED, "Tijori's preset list changed shape.")
+    presets = []
+    for category, items in body.items():
+        for item in items if isinstance(items, list) else []:
+            try:
+                presets.append(
+                    Preset(
+                        preset_id=int(item["id"]),
+                        name=str(item["name"]),
+                        category=str(category),
+                        description=" ".join(str(item.get("description") or "").split())[:200],
+                        paid_only=str(item.get("plan_tier") or "").lower() != "free",
+                        financial=str(item.get("financial_query") or ""),
+                        business=str(item.get("alt_query") or ""),
+                        superstar_investors=bool(item.get("whales")),
+                    )
+                )
+            except (KeyError, TypeError, ValueError) as exc:
+                raise TearsheetError(
+                    ErrorCode.UPSTREAM_CHANGED, "Tijori's preset list changed shape."
+                ) from exc
+    return presets

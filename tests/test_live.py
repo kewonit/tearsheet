@@ -224,3 +224,14 @@ def test_an_anonymous_session_has_no_paid_features(cache, tmp_path):
     entitlements = page_data("NGLFINE", cache, tmp_path).page.entitlements
     assert (entitlements.plan_tier, entitlements.metrics_history) == ("free", False)
     assert (entitlements.revenue_mix_history, entitlements.market_share_history) == (False, False)
+
+
+def test_every_catalogue_field_is_accepted_by_the_query_check(cache, tmp_path):
+    from tearsheet.sources.tijori.catalogue import check_query, load_catalogue
+
+    async def work(client):
+        return await load_catalogue(client, cache)
+
+    fields = run(work, tmp_path)
+    for field in fields:
+        check_query(f"{field.name} > 0", fields)

@@ -91,6 +91,8 @@ def test_tool_list_is_stable_cacheable_and_read_only(server):
         "get_ownership",
         "get_operating_metrics",
         "get_business_mix",
+        "search_screen_fields",
+        "screen_stocks",
         "server_status",
     ]
     assert first["tools"] == second["tools"]
