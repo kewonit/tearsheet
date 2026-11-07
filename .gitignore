@@ -1,0 +1,22 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+dist/
+build/
+
+# Tijori data and credentials must never be committed. See docs/DATA-USE.md.
+.local/
+.tearsheet/
+session*.json
+*.sqlite
+*.sqlite3
+/recordings/
+/filings/
+
+# Editors and OS
+.DS_Store
+.idea/
+.vscode/
