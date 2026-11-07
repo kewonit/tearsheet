@@ -1,7 +1,7 @@
 """Company tools that read Tijori's overview and shareholding pages."""
 
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Annotated, Any, Literal
 
 from mcp.server.mcpserver import MCPServer
@@ -33,6 +33,10 @@ PAGE_TTL_S = 3600
 SHAREHOLDING_TTL_S = 6 * 3600
 METRIC_TTL_S = 6 * 3600
 PAID_ONLY = "History needs a paid Tijori plan, so only the latest value is shown."
+
+
+def month(day: date) -> str:
+    return day.strftime("%b %Y")
 
 
 class CompanyData(BaseModel):
@@ -126,7 +130,7 @@ def build_snapshot(match: Match, data: CompanyData) -> tuple[Snapshot, list[str]
 class MetricSeries(BaseModel):
     name: str
     unit: str
-    latest_date: str | None
+    latest_period: str | None
     latest_value: float | None
     history: list[tuple[str, float | None]] | None
 
@@ -141,7 +145,7 @@ async def _metric_points(
     client: TijoriClient, cache: Cache, company_id: int, metric: MetricInfo, history: bool
 ) -> list[tuple[str, float | None]]:
     """Fetch one metric. Without paid access only the latest point is kept, even in the cache."""
-    key = f"{company_id}:{metric.metric_id}:{'all' if history else 'latest'}"
+    key = f"{company_id}:{metric.metric_id}:{'all' if history else 'latest'}:v2"
     entry = cache.get("operating_metrics", key)
     if entry is not None:
         return [tuple(point) for point in entry.value]
@@ -150,13 +154,17 @@ async def _metric_points(
     series = body.get("data") if isinstance(body, dict) else None
     if not isinstance(series, list):
         raise ToolFailure(ErrorCode.UPSTREAM_CHANGED, "Tijori's metric data changed shape.")
-    points = []
+    dated = []
     for point in series:
         if isinstance(point, list) and len(point) == 2:
             day = date_from_epoch_ms(point[0])
             if day is not None:
-                points.append((day.isoformat(), number(point[1])))
-    points.sort()
+                dated.append((day, number(point[1])))
+    # Tijori's chart dates mark a month, with a day that varies for no reason,
+    # such as 1 March one year and 31 March the next. Sort by the real date,
+    # then label by month.
+    dated.sort(key=lambda item: item[0])
+    points = [(month(day), value) for day, value in dated]
     kept = points if history else points[-1:]
     cache.put("operating_metrics", key, kept, ttl_s=METRIC_TTL_S)
     return kept
@@ -258,7 +266,7 @@ def register(server: MCPServer, *, client: TijoriClient, cache: Cache, read_only
                 MetricSeries(
                     name=info.name,
                     unit=info.unit,
-                    latest_date=latest[0],
+                    latest_period=latest[0],
                     latest_value=latest[1],
                     history=points if history else None,
                 )
@@ -332,7 +340,7 @@ async def _revenue_history(
     for chart in charts:
         response = await client.get(f"/api/rmix/historic/graph/{chart.chart_id}")
         body = response.json()
-        by_date: dict[str, dict[str, float | None]] = {}
+        by_date: dict[date, dict[str, float | None]] = {}
         for part in (body.get("context") if isinstance(body, dict) else None) or []:
             try:
                 points = json.loads(part.get("graphdata") or "[]")
@@ -341,8 +349,6 @@ async def _revenue_history(
             for stamp, value in points:
                 day = date_from_epoch_ms(stamp)
                 if day is not None:
-                    by_date.setdefault(day.isoformat(), {})[str(part.get("fieldname"))] = number(
-                        value
-                    )
-        history[chart.title] = sorted(by_date.items())
+                    by_date.setdefault(day, {})[str(part.get("fieldname"))] = number(value)
+        history[chart.title] = [(month(day), shares) for day, shares in sorted(by_date.items())]
     return history

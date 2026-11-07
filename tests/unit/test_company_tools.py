@@ -18,6 +18,7 @@ METRICS = (
 MIX = """<div class="rmix_graph_block"><h4>Product</h4>
 <div class="rmix_pie_chart" chart-id="9" chart-data="[[&quot;Widgets&quot;, 100.0]]"></div></div>"""
 POINTS = {"data": [[1711909800000, 10.0], [1743445800000, 20.0], [1774981800000, 30.0]]}
+MIX_POINTS = {"data": [[1774981800000, 100.0]]}
 
 
 class FakeClient:
@@ -37,7 +38,7 @@ class FakeClient:
         if "company_op_metrics" in path:
             return Response(200, json.dumps(POINTS))
         if "rmix/historic" in path:
-            graph = json.dumps([[1774981800000, 100.0]])
+            graph = json.dumps(MIX_POINTS["data"])
             return Response(
                 200, json.dumps({"context": [{"fieldname": "Widgets", "graphdata": graph}]})
             )
@@ -70,8 +71,8 @@ PAID = page(
 def test_free_plan_gets_only_the_latest_metric_value(cache):
     result, _ = call(FREE, cache, "get_operating_metrics")
     metric = result["data"]["metrics"][0]
-    assert (metric["latest_date"], metric["latest_value"], metric["history"]) == (
-        "2026-04-01",
+    assert (metric["latest_period"], metric["latest_value"], metric["history"]) == (
+        "Apr 2026",
         30.0,
         None,
     )
@@ -80,9 +81,9 @@ def test_free_plan_gets_only_the_latest_metric_value(cache):
 
 def test_free_plan_history_is_not_even_cached(cache):
     call(FREE, cache, "get_operating_metrics")
-    stored = [cache.get("operating_metrics", f"77:{m}:latest").value for m in ("11", "12")]
+    stored = [cache.get("operating_metrics", f"77:{m}:latest:v2").value for m in ("11", "12")]
     assert all(len(points) == 1 for points in stored)
-    assert cache.get("operating_metrics", "77:11:all") is None
+    assert cache.get("operating_metrics", "77:11:all:v2") is None
 
 
 def test_paid_plan_gets_history(cache):
@@ -101,7 +102,7 @@ def test_free_plan_never_requests_revenue_mix_history(cache):
 def test_paid_plan_requests_revenue_mix_history(cache):
     result, paths = call(PAID, cache, "get_business_mix")
     assert [p for p in paths if "rmix/historic" in p] == ["/api/rmix/historic/graph/9"]
-    assert result["data"]["revenue_mix_history"]["Product"] == [["2026-04-01", {"Widgets": 100.0}]]
+    assert result["data"]["revenue_mix_history"]["Product"] == [["Apr 2026", {"Widgets": 100.0}]]
 
 
 def test_a_company_without_metrics_is_a_normal_empty_result(cache):
@@ -137,3 +138,23 @@ def test_one_page_fetch_serves_several_tools(cache):
     for tool in ("company_snapshot", "get_business_mix", "get_operating_metrics"):
         asyncio.run(server.call_tool(tool, {"company": "ACMEFINE"}))
     assert client.paths.count("/company/acme/") == 1
+
+
+def test_history_is_labelled_by_month_and_kept_in_date_order(cache, monkeypatch):
+    # Mar 2025 then Jan 2026: sorting the labels as text would put Jan first.
+    # The days differ (1st and 31st), as they do in Tijori's own data.
+    jan_2026, mar_2025 = 1767225600000, 1740787200000
+    monkeypatch.setitem(POINTS, "data", [[jan_2026, 2.0], [mar_2025, 1.0]])
+    result, _ = call(PAID, cache, "get_operating_metrics", limit=1)
+    assert result["data"]["metrics"][0]["history"] == [["Mar 2025", 1.0], ["Jan 2026", 2.0]]
+    assert result["data"]["metrics"][0]["latest_period"] == "Jan 2026"
+
+
+def test_revenue_mix_history_is_kept_in_date_order(cache, monkeypatch):
+    jan_2026, mar_2025 = 1767225600000, 1740787200000
+    monkeypatch.setitem(MIX_POINTS, "data", [[jan_2026, 60.0], [mar_2025, 40.0]])
+    result, _ = call(PAID, cache, "get_business_mix")
+    assert [label for label, _ in result["data"]["revenue_mix_history"]["Product"]] == [
+        "Mar 2025",
+        "Jan 2026",
+    ]
