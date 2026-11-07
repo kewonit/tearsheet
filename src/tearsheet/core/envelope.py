@@ -56,7 +56,11 @@ def to_result(envelope: Envelope) -> CallToolResult:
     The SDK's default text block is indented JSON, which costs tokens on every
     call. The text repeats the structured data for clients that only read text.
     """
-    payload = envelope.model_dump(mode="json", exclude_none=True)
+    # Only empty top-level fields are dropped. A blank inside the data says a
+    # figure is missing, and removing it would break the declared schema.
+    payload = {
+        key: value for key, value in envelope.model_dump(mode="json").items() if value is not None
+    }
     text = json.dumps(payload, separators=(",", ":"), ensure_ascii=False)
     return CallToolResult(
         content=[TextContent(type="text", text=text)],

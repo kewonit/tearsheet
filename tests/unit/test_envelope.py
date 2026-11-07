@@ -51,3 +51,15 @@ def test_indian_text_stays_readable():
 
 def test_schema_marks_data_as_required():
     assert "data" in Envelope[Revenue].model_json_schema()["required"]
+
+
+class WithBlank(BaseModel):
+    required_but_blank: str | None
+    figure: float | None
+
+
+def test_blanks_inside_the_data_are_kept_so_the_result_matches_its_schema():
+    envelope = Envelope[WithBlank](data=WithBlank(required_but_blank=None, figure=None))
+    payload = to_result(envelope).structured_content
+    assert payload["data"] == {"required_but_blank": None, "figure": None}
+    Envelope[WithBlank].model_validate(payload)
