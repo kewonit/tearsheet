@@ -1,37 +1,40 @@
-# How tearsheet uses data
+# Data use
 
-tearsheet sits between an AI agent and data other people own, so its design starts from what those owners allow. This page explains those limits and the rules that follow from them.
+tearsheet reads data owned by Tijori Finance and filings published through the exchanges. This page sets out what those owners allow and the rules the code follows as a result.
 
-This is not legal advice. Terms change, and you are responsible for how you use your own accounts. Read the terms yourself.
+This isn't legal advice. Terms change, and you're responsible for how you use your own accounts.
 
 ## Tijori Finance
 
-Tijori's [FAQ](https://www.tijorifinance.com/faq/) says its public developer APIs are limited and points enterprise needs to its support team. tearsheet therefore reads the same pages and data your browser loads when you are signed in. These are undocumented and could change or stop working at any time.
+- Tijori's [FAQ](https://www.tijorifinance.com/faq/) says its public developer APIs are limited and directs enterprise users to its support team.
+- Its [Terms of Use](https://www.tijorifinance.com/terms-of-use) allow copying and storing content for personal, non-commercial use, and restrict reproduction and distribution. They don't address automated access.
+- Its `robots.txt` allows AI crawlers. That is permission to crawl, not a licence to the data.
 
-Tijori's [Terms of Use](https://www.tijorifinance.com/terms-of-use) limit copying and storing its content to your own personal, non-commercial use, and restrict reproducing or distributing it. They don't mention automated access. Tijori's `robots.txt` allows AI crawlers, but that is permission to crawl, not a licence to the data.
-
-So tearsheet is built for one person, using their own account, for their own research.
+tearsheet reads the same pages and endpoints your browser loads on Tijori's site. They're undocumented and may change or stop working. tearsheet is built for one person using their own account for their own research.
 
 ## NSE and BSE
 
-NSE's [Terms of Use](https://www.nseindia.com/nse-terms-of-use) prohibit systematic or automated data collection from its website and app, including scraping. BSE's disclaimers restrict reproducing its content without consent.
+- NSE's [Terms of Use](https://www.nseindia.com/nse-terms-of-use) prohibit systematic or automated data collection from its website and app, including scraping.
+- BSE's disclaimers restrict reproduction of its content without consent.
 
-**tearsheet never contacts nseindia.com or bseindia.com.** Instead, you download the filings you want by hand and put them in your filings folder, and tearsheet reads them locally. This means figures can only be checked against filings you've added.
+tearsheet never contacts nseindia.com or bseindia.com. You download filings yourself and tearsheet reads them from disk, so figures can only be verified against filings you've added.
 
-NSE also runs its [own MCP server](https://www.nseindia.com/nse-mcp), which you can connect to your assistant separately. NSE provides it for information and learning, not for trading, advice or commercial products.
+NSE runs its own [MCP server](https://www.nseindia.com/nse-mcp), which you can connect to your assistant separately.
 
-## The rules
+## Rules
 
-These apply to all code in this project.
+Every change to tearsheet must keep to these.
 
-1. **Your account only.** tearsheet runs on your machine with your own login. It has no hosted mode, no shared cache and no network server.
-2. **No third-party data in the repository.** Test fixtures are made up. Never commit real responses, cached data or filings.
-3. **No evasion.** No stealth plugins, disguised user agents, challenge solving or routes around access controls. If a site refuses a request, the tool reports it and stops.
-4. **No automated exchange access.** See above.
-5. **Be polite.** By default, about one request a second and at most two at a time.
-6. **Respect licensing limits.** Tijori can only show changes in commodity prices, so tearsheet doesn't try to work out the prices.
-7. **No advice.** Facts and calculations only, with no buy or sell calls and no order placement. Tijori's own opinions, forecasts and red or green flags are left out too.
-8. **Respect plan limits.** tearsheet returns only what your Tijori plan shows on the page. Tijori's API returns some data, such as metric history, even to free users whose pages lock it. tearsheet neither requests nor stores that data unless your session's plan unlocks it.
-9. **Keep credentials private.** Sessions are stored owner-only, outside the repository, and cookie values are never logged or returned.
+| Rule | In the code |
+|---|---|
+| **Your account only** | stdio only. No hosted mode, network listener or shared cache |
+| **No third-party data in the repository** | Fixtures are synthetic. The cache and sessions live in `~/.tearsheet` |
+| **No evasion** | Ordinary headless Chromium. No stealth plugins, disguised user agents or challenge solving. A 403 raises `BLOCKED`, which is not retryable |
+| **No automated exchange access** | No code contacts NSE or BSE |
+| **Limited request rate** | Request starts at least 1 second apart, at most 2 at once |
+| **Plan limits respected** | Data a plan locks on Tijori's pages is never requested, and is discarded before caching when a response includes it. See [ARCHITECTURE.md](ARCHITECTURE.md#plan-gating) |
+| **Licensing limits respected** | Tijori shows only changes in commodity prices, so tearsheet doesn't derive the prices |
+| **No advice** | Facts and calculations only. Tijori's own opinions, forecasts and red or green flags are excluded. No order placement |
+| **Credentials kept private** | Sessions are stored owner-only. Cookie values are never logged or returned |
 
-If an owner of this data objects to how tearsheet works, please [open an issue](https://github.com/kewonit/tearsheet/issues).
+If you own any of this data and object to how tearsheet uses it, [open an issue](https://github.com/kewonit/tearsheet/issues).

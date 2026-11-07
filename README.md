@@ -1,47 +1,21 @@
 # tearsheet
 
-tearsheet is a local [MCP](https://modelcontextprotocol.io) server that helps AI agents research Indian listed companies. It reads [Tijori Finance](https://www.tijorifinance.com) the way your browser does, and can check figures against filings you download yourself.
+tearsheet is an [MCP](https://modelcontextprotocol.io) server for researching companies listed in India. It reads [Tijori Finance](https://www.tijorifinance.com) through a local headless browser and checks quarterly figures against XBRL filings you download yourself.
 
-> **Alpha.** The Tijori tools are tested against the live site, and the filing tools against real filings. Sign-in hasn't been tested on Tijori itself yet.
+It runs on your machine over stdio. Version 0.2.0 is alpha.
 
-> tearsheet isn't affiliated with or endorsed by Tijori Financial Services, NSE or BSE. Read [how it uses data](docs/DATA-USE.md) before you use it.
+tearsheet isn't affiliated with or endorsed by Tijori Financial Services, NSE or BSE. Read [docs/DATA-USE.md](docs/DATA-USE.md) before using it.
 
-## What it's for
+## Requirements
 
-Agents are good at reasoning about a company and bad at getting exact figures right. tearsheet is built around that:
-
-- **Units on every figure.** Statements mix crore, percentages, days and multiples, so every row says which it is.
-- **Honest periods.** Trailing twelve months and interim columns are labelled, rather than passing as financial years.
-- **Gaps stay visible.** A figure that Tijori's own data contradicts is left blank, with the reason, and the model is never left to guess.
-- **Maths on the server.** Growth, CAGR and peer statistics are calculated, not left to the model.
-- **Filters that are proven to apply.** A screen's filter that Tijori silently drops is reported as an error, never returned as results.
-- **Small responses.** Typical results are 1 to 15 KB.
-- **Facts, not advice.** Tijori's own opinions and forecasts are left out, and nothing says buy or sell.
-
-## Tools
-
-| Tool | What it does |
-|---|---|
-| `find_company` | Finds a company by NSE symbol, BSE code or name, and gives the real symbol if yours was wrong |
-| `company_snapshot` | One-call overview: price, size, valuation, key ratios, dividends and recent events |
-| `get_financials` | Income, balance sheet, cash flow, quarterly results, ratios and fund flow |
-| `get_ownership` | Shareholding pattern by quarter, with each row's change |
-| `get_operating_metrics` | Company-specific KPIs such as capacity or deal wins |
-| `get_business_mix` | Revenue split by product, region or segment, and market shares with their dates |
-| `screen_stocks` | Whole-market screens on financial conditions, business filters or presets |
-| `search_screen_fields` | Finds exact screener field names, with units |
-| `compare_companies` | Compares 2 to 6 companies, with growth and peer statistics calculated on the server |
-| `get_sector_view` | Market indices, sector indices and conglomerates, with their constituents |
-| `search_filings` | Searches filings you downloaded |
-| `read_filing` | Reads pages or figures from one of those filings |
-| `reconcile_figure` | Checks a quarterly figure against its filing |
-| `server_status` | Reports the session, cache and filings folder |
-
-There are also three prompts: `earnings_review`, `peer_comparison` and `thesis_check`.
+- Python 3.12 or later
+- [uv](https://docs.astral.sh/uv/)
+- Chromium for Playwright, installed below
+- An MCP client that can launch stdio servers, such as Claude Code or Claude Desktop
 
 ## Install
 
-tearsheet needs [uv](https://docs.astral.sh/uv/) and isn't on PyPI yet.
+tearsheet isn't on PyPI yet. Install it from source:
 
 ```sh
 git clone https://github.com/kewonit/tearsheet.git
@@ -50,13 +24,15 @@ uv sync
 uv run playwright install chromium
 ```
 
-**Claude Code:**
+## Add it to a client
+
+Claude Code:
 
 ```sh
 claude mcp add tearsheet -- uv --directory /path/to/tearsheet run tearsheet
 ```
 
-**Claude Desktop and other MCP clients**, in the client's MCP settings file:
+Claude Desktop and other clients take this in their MCP settings file:
 
 ```json
 {
@@ -69,53 +45,118 @@ claude mcp add tearsheet -- uv --directory /path/to/tearsheet run tearsheet
 }
 ```
 
-## Signing in
+## Tools
 
-You don't need to sign in: every tool works from Tijori's public pages. If your Tijori plan includes data that free accounts don't get, such as metric history, run `uv run tearsheet login` and sign in on Tijori's page. Your password goes to Tijori, never to tearsheet.
+Tools that take a company accept its name, NSE symbol or BSE code. [docs/TOOLS.md](docs/TOOLS.md) lists every parameter.
 
-tearsheet only returns what your plan shows. On the free plan that means the latest value of operating metrics, revenue mix and market share, but not their history. See [DATA-USE.md](docs/DATA-USE.md) for why.
+| Tool | Returns |
+|---|---|
+| `find_company` | Name, NSE symbol, BSE code and Tijori slug |
+| `company_snapshot` | Delayed price, market cap, P/E, PEG, key ratios, 3- and 5-year averages, price changes, dividends and dated events |
+| `get_financials` | Income statement, balance sheet, cash flow, quarterly results, ratios or fund flow |
+| `get_ownership` | Shareholding by quarter, with each row's change from the previous quarter |
+| `get_operating_metrics` | Company-specific KPIs, such as capacity, volumes or deal wins |
+| `get_business_mix` | Revenue split by product, region or segment, and market shares with their dates |
+| `search_screen_fields` | Exact screener field names, with units |
+| `screen_stocks` | Companies matching a financial condition, a business filter or a preset |
+| `compare_companies` | 2 to 6 companies side by side, with growth, 3-year CAGR and peer minimum, median and maximum calculated by tearsheet |
+| `get_sector_view` | Headline indices, sector indices and conglomerates. Sectors and conglomerates include constituents |
+| `search_filings` | Pages and figures in your filings that match a query |
+| `read_filing` | PDF pages, or XBRL figures in crore with their periods |
+| `reconcile_figure` | One quarterly figure from Tijori beside the filed figure |
+| `server_status` | Session state, cache contents and filing count. Works offline |
+
+Prompts: `earnings_review`, `peer_comparison` and `thesis_check`.
+
+## Results
+
+Every tool returns the same envelope, as `structuredContent` with a declared output schema and as compact JSON text:
+
+```json
+{
+  "data": {},
+  "entity": {"name": "Example Ltd", "nse": "EXAMPLE", "bse": "500000"},
+  "as_of": "2026-09-30",
+  "retrieved_at": "2026-11-08T04:30:00Z",
+  "units": {"currency": "INR", "scale": "crore"},
+  "sources": [{"provider": "tijori", "url": "https://www.tijorifinance.com/company/example/financials/"}],
+  "verification": {"status": "matched", "detail": "Checked against filings: revenue Sep 2026."},
+  "warnings": []
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `units` | Money is in crore unless a row states otherwise |
+| Row `unit` | One of `crore`, `crore_shares`, `percent`, `days`, `multiple`, `rupees_per_share` or `as_reported`. `as_reported` means the unit is unknown |
+| Period labels | `TTM` marks trailing twelve months. `Interim` marks a column whose length Tijori doesn't state |
+| `null` value | No reliable figure exists. A warning gives the reason |
+| `verification.status` | `matched` or `mismatch` against a filing, otherwise `unchecked` |
+| `warnings` | Anything that affects how to read the data |
+
+Errors return `code`, `message`, `retryable` and, where useful, `hint`. The codes are listed in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#errors).
+
+## Plan access
+
+| Data | Free plan or signed out | Paid plan |
+|---|---|---|
+| Statements, ratios, fund flow, ownership, screens, sectors | Yes | Yes |
+| Latest operating metrics, revenue split and market shares | Yes | Yes |
+| History of operating metrics, revenue split and market shares | No | Yes |
+| Premium screen presets | No | Yes |
+
+tearsheet reads the plan from the signed-in session's company pages and returns only what that plan shows there. Some Tijori responses include history even for free accounts. On a free plan tearsheet keeps only the latest value from them, caches nothing else, and never calls the revenue mix history endpoint.
+
+## Sign in
+
+Only needed for paid-plan data.
+
+```sh
+uv run tearsheet login
+```
+
+This opens Chromium on Tijori's sign-in page. You sign in there, so tearsheet never handles your password. When Tijori sets a session cookie, tearsheet saves the browser session to `~/.tearsheet/session.json` with owner-only permissions and closes the window. It waits up to 10 minutes. If a sign-in method is refused in that window, use another.
+
+`tearsheet login` has been tested against a local sign-in page, not yet against Tijori's.
 
 ## Filings
 
-The exchanges prohibit automated collection, so tearsheet never downloads filings. Download them yourself and put them in `~/.tearsheet/filings`:
+tearsheet never downloads filings, because NSE and BSE prohibit automated collection. Download them yourself into `~/.tearsheet/filings`:
 
-- **Quarterly results as XBRL.** From 2025, these are on NSE under *Integrated Filing - Financials*. Each file names its own company, so any file name works.
-- **PDFs** such as annual reports and concall transcripts. Put these in a folder named after the NSE symbol or BSE code, such as `filings/NGLFINE/annual-report-2026.pdf`.
-
-`get_financials` then checks quarterly revenue, profit before tax and net profit against any matching filing, and `reconcile_figure` compares one figure in detail.
-
-Checking real filings shows why this matters. Tijori's quarterly figures matched to within rounding for a manufacturer, an NBFC, a bank and a life insurer, but its profit before tax for the bank and the insurer wasn't the statutory figure. The bank's differs by its minority interest. Reconciliation reports those as mismatches with both figures.
-
-Templates other than these four, and results filed before 2025, haven't been tested.
-
-## Where your data lives
-
-| Setting | Default | Holds |
+| File | Source | Naming |
 |---|---|---|
-| `TEARSHEET_HOME` | `~/.tearsheet` | Your session and the cache |
+| Quarterly results, XBRL | NSE, *Integrated Filing - Financials* (results from 2025 on) | Any name. The file states its company |
+| Annual reports and transcripts, PDF | NSE, BSE or the company's website | Inside a folder named after the NSE symbol or BSE code, such as `NGLFINE/annual-report-2026.pdf` |
+
+With a matching XBRL filing, `get_financials` checks quarterly revenue, profit before tax and net profit. A figure matches when it is within ₹5 lakh or 0.01% of the filed value, whichever is larger. Tijori rounds to two decimals in crore, so anything wider is a real difference.
+
+Tested on integrated filings from a manufacturer, an NBFC, a bank and a life insurer. In those, Tijori's profit before tax differed from the statutory figure for the bank (by its minority interest) and the insurer, and tearsheet reports both as mismatches. General insurers and results filed before 2025 are untested.
+
+## Files and settings
+
+| Variable | Default | Contents |
+|---|---|---|
+| `TEARSHEET_HOME` | `~/.tearsheet` | `session.json` and `cache.sqlite3`, both owner-only |
 | `TEARSHEET_FILINGS_DIR` | `~/.tearsheet/filings` | Filings you downloaded |
 
-Everything stays on your machine. tearsheet makes at most about one request a second to Tijori, and none to NSE or BSE.
+tearsheet sends at most one request a second to Tijori, two at a time, and none to NSE or BSE.
 
-## Know the limits
+## Limitations
 
-- Prices on Tijori are delayed, not live.
-- Figures are Tijori's, and are marked unchecked unless a filing confirms them.
-- tearsheet reads Tijori's web pages, which can change without notice. When they do, tools fail with a clear error rather than returning bad data.
-- Some of Tijori's own presets are broken, and tearsheet passes on Tijori's error when one fails.
-
-## Evaluation
-
-`evals/` holds 30 analyst tasks, 10 of them held out, and a runner that scores a real agent's tool choice, answers, tool calls and tokens. A first sample of 6 tasks passed 5. The miss was a held-out task where the agent answered correctly by a different route than the check requires. See [evals/run.py](evals/run.py).
+- Prices are delayed.
+- Figures are Tijori's. Only quarterly revenue, profit before tax and net profit can be verified, and only for quarters with a filing.
+- tearsheet parses Tijori's pages and private endpoints. When their shape changes, tools return `UPSTREAM_CHANGED` instead of partial data.
+- Some of Tijori's presets fail on Tijori's side. tearsheet returns Tijori's error.
+- Tijori doesn't expose ISINs.
 
 ## Not investment advice
 
-tearsheet provides facts and calculations for research. It doesn't recommend buying, selling or holding anything, can't place orders, and isn't a SEBI-registered adviser or research analyst. Data can be wrong or out of date, so check anything you plan to rely on.
+tearsheet returns facts and calculations. It doesn't recommend buying, selling or holding anything, can't place orders, and isn't registered with SEBI as an adviser or research analyst.
 
-## Contributing
+## Development
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). To report a security problem, see [SECURITY.md](SECURITY.md). Changes are listed in [CHANGELOG.md](CHANGELOG.md).
+[CONTRIBUTING.md](CONTRIBUTING.md) covers setup, test suites and releases. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) describes the design. Report vulnerabilities as described in [SECURITY.md](SECURITY.md). Changes are in [CHANGELOG.md](CHANGELOG.md).
 
 ## Licence
 
-[MIT](LICENSE). See [NOTICE](NOTICE) for credits.
+[MIT](LICENSE). Credits are in [NOTICE](NOTICE).
