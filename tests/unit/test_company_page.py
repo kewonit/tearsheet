@@ -27,7 +27,7 @@ def page(*, locks=None, plan=None, extra=""):
         "pe": 20.5,
         "has_peg": True,
         "peg": 1.5,
-        "peg_summary": "TIJORI OPINION: the thesis becomes live soon",
+        "peg_summary": "TIJORI OPINION: made-up commentary for this test",
         "quick_look": {
             "data": [{"name": "Flags", "factories": [{"sentence": "TIJORI JUDGEMENT"}]}],
             "table_data": [
