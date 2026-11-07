@@ -2,7 +2,7 @@
 
 Tearsheet is a local [MCP](https://modelcontextprotocol.io) server that helps AI agents research Indian listed companies. It uses your own Tijori Finance account, plus any filings you download yourself.
 
-> **Early development.** The foundation works, but there are no company data tools yet. See the [roadmap](docs/ROADMAP.md).
+> **Early development.** Company lookup and financial statements work, but most planned tools aren't built yet. See the [roadmap](docs/ROADMAP.md).
 
 > **Unofficial.** Tearsheet is not affiliated with or endorsed by Tijori Financial Services, NSE or BSE. Read [how it uses data](docs/DATA-USE.md) before you use it.
 
@@ -10,18 +10,20 @@ Tearsheet is a local [MCP](https://modelcontextprotocol.io) server that helps AI
 
 Agents are good at reasoning about a company and bad at getting exact figures right. Tearsheet is designed to help with that:
 
-- **Answers in one call.** Tools work at the level of a research question, and accept a name, NSE symbol, BSE code or ISIN.
-- **Numbers you can trust.** Results state their units, date and source, and maths is done on the server rather than by the model.
-- **Figures you can check.** A figure can be compared with a filing you've added, and anything unchecked is labelled `unchecked`.
+- **Answers in one call.** Tools work at the level of a research question, and accept a name, NSE symbol or BSE code.
+- **Numbers you can trust.** Results state their units, date and source. Calculations will run on the server rather than in the model.
+- **Figures you can check.** Comparing a figure with a filing you've added is planned. Until then, every figure is labelled `unchecked`.
 - **Small responses.** Output is typed and compact, so research doesn't fill the context window.
 
 ## What works today
 
-- `tearsheet login` signs in through a real browser window. Your password goes to Tijori's page, never to Tearsheet.
-- `server_status` is the only MCP tool so far. It reports the saved session, cache contents and added filings.
-- The shared response format, rate limiting and a local cache are in place for the tools to come.
+| Tool | What it does |
+|---|---|
+| `find_company` | Finds a company by NSE symbol, BSE code or name, and tells you if a symbol was wrong |
+| `get_financials` | Returns income statements, balance sheets, cash flow, quarterly results and ratios |
+| `server_status` | Reports the saved session, cache contents and added filings |
 
-The sign-in has been tested against a local test page, but not yet against Tijori itself.
+These tools work without signing in, because the pages they read are public. `tearsheet login` signs in through a real browser window, so your password goes to Tijori's page and never to Tearsheet. It has been tested against a local test page, but not yet against Tijori itself.
 
 ## Install
 

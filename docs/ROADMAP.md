@@ -8,6 +8,8 @@
 - MCP server with `server_status`, tested on current and 2025 protocol revisions
 - CI
 - Checked which Tijori pages and data work on a paid account, and that requests need a browser. See [How Tijori behaves](ARCHITECTURE.md#how-tijori-behaves)
+- Browser client, guarded screener and a company index
+- `find_company` and `get_financials`, checked against figures on Tijori's own pages
 
 ## Next: finish proving Tijori access
 
@@ -16,7 +18,7 @@
 
 ## Then
 
-**Tijori tools.** A browser-based client, a company resolver, then the data tools. Each upstream response is validated, so site changes fail loudly instead of returning bad data.
+**Tijori tools.** The remaining data tools, starting with `screen_stocks` and `company_snapshot`. Each upstream response is validated, so site changes fail loudly instead of returning bad data.
 
 **Filings.** Index a local folder and read XBRL results (Regulation 33) and shareholding (Regulation 31) with a small in-house reader, tested on real filings. Add `search_filings`, `read_filing` and `reconcile_figure`, then turn on the `verification` field.
 

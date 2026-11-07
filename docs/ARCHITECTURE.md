@@ -8,10 +8,10 @@ src/tearsheet/
   cli.py              The tearsheet command
   login.py            Browser sign-in
   core/               Envelope, errors, units, cache, rate limiter, session, paths
-  sources/tijori/     Planned: requests and parsers
+  sources/tijori/     Browser client, screener, company index, financials
   sources/filings/    Planned: local folder index, XBRL reader, PDF text
   analytics/          Planned: ratios and reconciliation
-  tools/              Planned: one module per tool family
+  tools/              One module per tool family
 ```
 
 ## Responses
@@ -21,7 +21,7 @@ Every tool returns the same envelope (`core/envelope.py`), so an agent always kn
 ```json
 {
   "data": {},
-  "entity": {"name": "Example Ltd", "nse": "EXAMPLE", "isin": "INE000A00000"},
+  "entity": {"name": "Example Ltd", "nse": "EXAMPLE", "bse": "500000"},
   "as_of": "2026-09-30",
   "retrieved_at": "2026-11-08T04:30:00Z",
   "units": {"currency": "INR", "scale": "crore"},
@@ -34,7 +34,7 @@ Every tool returns the same envelope (`core/envelope.py`), so an agent always kn
 
 - Results include `structuredContent` that matches a declared `outputSchema`, and repeat it as compact JSON text for clients that only read text.
 - Empty optional fields are left out to save tokens.
-- Money is always in crore, converted through `Decimal`. Mistaking the scale is an easy error that's hard to spot.
+- Money is always in crore. Mistaking the scale is an easy error that's hard to spot, so rows in a statement also state their own unit, because statements mix crore, percentages, days and multiples.
 - `verification.status` is `unchecked` unless a filing proves otherwise.
 
 ## Errors
@@ -51,14 +51,14 @@ Tearsheet targets MCP revision 2026-07-28 and also serves 2025-11-25 clients. `t
 
 ## Planned tools
 
-There will be 14 tools. Each accepts a company name, NSE symbol, BSE code or ISIN, so agents don't have to chain IDs between calls.
+There will be 14 tools. Each accepts a company name, NSE symbol or BSE code, so agents don't have to chain IDs between calls.
 
 | Tool | Purpose | Status |
 |---|---|---|
 | `server_status` | Session, cache and filings health | Done |
-| `find_company` | Resolve a company to all its identifiers | Planned |
+| `find_company` | Resolve a company to all its identifiers | Done |
 | `company_snapshot` | One-call overview of a company | Planned |
-| `get_financials` | Statements with fixed units and computed ratios | Planned |
+| `get_financials` | Statements with labelled periods and units | Done |
 | `get_operating_metrics` | Company-specific KPIs over time | Planned |
 | `get_business_mix` | Revenue mix, market share and raw materials | Planned |
 | `get_ownership` | Shareholding and fund flow trends | Planned |
@@ -79,6 +79,19 @@ Tested on 8 November 2026 with a signed-in paid account. [tijori-finance-mcp](ht
 **Requests have to come from a browser.** A plain HTTP client gets a 403, while an ordinary headless browser that identifies itself honestly is served normally. Tearsheet will keep one headless browser open and make requests from inside a page.
 
 **Nothing tested needs rendering.** Company, shareholding, raw material, macro and market pages carry their data in the HTML, and the financials page embeds its statements as JSON in a script tag. The popular screens page is the exception, as JavaScript builds it, but it gets its data from a JSON endpoint that can be called directly. Parsing what comes back avoids loading pages and clicking tabs, which keeps each call fast. The IDs that operating metrics, fund flow and revenue history need are in the company page.
+
+**Keep the browser somewhere quiet.** Real pages poll for live prices, so Tearsheet's browser sits on `/robots.txt`, which makes no background requests, and closes when the server does.
+
+**Symbols need a local index.** Company search matches names, not symbols, and company pages show no identifiers at all. Screener rows do carry the NSE symbol and BSE code, so one market-wide screen builds an index that Tearsheet refreshes weekly. A lookup tries the exact symbol, the BSE code, the slug, the name, then Tijori's search. Tijori exposes no ISINs.
+
+**Financial data has traps that produce confident wrong numbers:**
+
+- The last income column can be trailing twelve months under a plain date. It's labelled `TTM` when it breaks the yearly pattern.
+- That column can lag the latest quarterly results, which gets a warning.
+- A figure missing from a recent quarter can be stored as 0, beside rows that prove it isn't. These are blanked with a warning, never replaced with a guess.
+- Section headers are stored as rows of zeros, so they're dropped.
+- Periods before a company had subsidiaries are blank in consolidated tables, so they're dropped too.
+- A row can have fewer values than there are periods. It's left out and named in a warning, because its alignment can't be known.
 
 **Don't trust `Content-Type`.** Company search returns valid JSON labelled `text/html`, so responses are judged by their body.
 
