@@ -137,3 +137,24 @@ def test_rejects_a_path_that_could_leave_the_site(site, tmp_path):
 
     with pytest.raises(ValueError):
         run(site, tmp_path, work)
+
+
+def test_several_callers_share_one_browser_start(site, tmp_path):
+    async def work(client):
+        await asyncio.gather(*(client.get("/json-labelled-html") for _ in range(4)))
+
+    run(site, tmp_path, work)
+    assert Handler.requests.count("/robots.txt") == 1
+
+
+def test_cancelling_a_caller_during_start_up_does_not_stop_a_clean_close(site, tmp_path):
+    async def work(client):
+        task = asyncio.create_task(client.get("/json-labelled-html"))
+        await asyncio.sleep(0.01)
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        await asyncio.wait_for(client.close(), timeout=20)
+        return client._browser, client._page
+
+    assert run(site, tmp_path, work) == (None, None)

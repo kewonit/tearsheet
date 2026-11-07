@@ -71,7 +71,7 @@ class TijoriClient:
         self._session_file = session_file
         self._base_url = base_url
         self._limiter = limiter or RateLimiter()
-        self._start_lock = asyncio.Lock()
+        self._starting: asyncio.Task[None] | None = None
         self._playwright: Any = None
         self._browser: Any = None
         self._page: Any = None
@@ -110,16 +110,31 @@ class TijoriClient:
                 raise
         self._page = page
 
+    async def _ready_page(self) -> Any:
+        """Start the browser once, however many callers arrive at the same time.
+
+        Start-up runs in its own task. If the caller is cancelled, for example
+        because the client quit, a half-started browser would otherwise stop the
+        server from exiting.
+        """
+        if self._page is None:
+            if self._starting is None:
+                self._starting = asyncio.create_task(self._start())
+            starting = self._starting
+            try:
+                await asyncio.shield(starting)
+            finally:
+                if starting.done():
+                    self._starting = None
+        return self._page
+
     async def get(self, path: str) -> Response:
         """Fetch a path on Tijori's site, stopping at any refusal."""
         from playwright.async_api import Error as PlaywrightError
 
         if not path.startswith("/"):
             raise ValueError("path must start with /")
-        async with self._start_lock:
-            if self._page is None:
-                await self._start()
-            page = self._page
+        page = await self._ready_page()
         async with self._limiter.slot():
             try:
                 result = await page.evaluate(_FETCH, path)
@@ -133,6 +148,9 @@ class TijoriClient:
 
     async def close(self) -> None:
         """Shut the browser down. Safe to call at any time, and more than once."""
+        starting, self._starting = self._starting, None
+        if starting is not None and asyncio.current_task() is not starting:
+            await asyncio.wait([starting])
         browser, playwright = self._browser, self._playwright
         self._browser = self._playwright = self._page = None
         if browser is not None:
