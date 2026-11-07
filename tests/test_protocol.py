@@ -84,7 +84,10 @@ def test_discover_reports_the_current_protocol(server):
 def test_tool_list_is_stable_cacheable_and_read_only(server):
     first = server.request("tools/list")["result"]
     second = server.request("tools/list")["result"]
-    assert [t["name"] for t in first["tools"]] == ["server_status"]
+    assert [t["name"] for t in first["tools"]] == [
+        "find_company",
+        "server_status",
+    ]
     assert first["tools"] == second["tools"]
     assert first["ttlMs"] == 3_600_000
     assert first["cacheScope"] == "public"
@@ -92,7 +95,8 @@ def test_tool_list_is_stable_cacheable_and_read_only(server):
 
 
 def test_status_result_matches_its_declared_schema(server):
-    tool = server.request("tools/list")["result"]["tools"][0]
+    tools = server.request("tools/list")["result"]["tools"]
+    tool = next(t for t in tools if t["name"] == "server_status")
     result = status_call(server)["result"]
     assert result["isError"] is False
     jsonschema.validate(result["structuredContent"], tool["outputSchema"])

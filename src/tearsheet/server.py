@@ -1,5 +1,7 @@
 """The MCP server. Tools are registered in a fixed order, which helps clients cache them."""
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 
@@ -13,6 +15,8 @@ from tearsheet.core import paths
 from tearsheet.core.cache import Cache
 from tearsheet.core.envelope import Envelope, to_result
 from tearsheet.core.session import SessionState, read_session_info
+from tearsheet.sources.tijori.client import TijoriClient
+from tearsheet.tools import companies
 
 INSTRUCTIONS = (
     "Tearsheet gives facts and calculations for researching Indian listed companies, "
@@ -78,6 +82,15 @@ def collect_status(session_file: Path, cache: Cache, filings: Path) -> Envelope[
 
 
 def build_server() -> MCPServer:
+    client = TijoriClient(paths.session_path())
+
+    @asynccontextmanager
+    async def close_browser_on_exit(_: MCPServer) -> AsyncIterator[None]:
+        try:
+            yield
+        finally:
+            await client.close()
+
     server = MCPServer(
         "tearsheet",
         version=__version__,
@@ -86,8 +99,10 @@ def build_server() -> MCPServer:
             "server/discover": CacheHint(ttl_ms=ONE_HOUR_MS, scope="public"),
             "tools/list": CacheHint(ttl_ms=ONE_HOUR_MS, scope="public"),
         },
+        lifespan=close_browser_on_exit,
     )
     cache = Cache(paths.cache_path())
+    companies.register(server, client=client, cache=cache, read_only=READ_ONLY)
 
     @server.tool(annotations=READ_ONLY)
     def server_status() -> Envelope[ServerStatus]:

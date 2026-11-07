@@ -16,7 +16,6 @@ class Entity(BaseModel):
     name: str
     nse: str | None = None
     bse: str | None = None
-    isin: str | None = None
 
 
 class Units(BaseModel):
