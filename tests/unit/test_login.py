@@ -7,7 +7,6 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
-
 from playwright.sync_api import sync_playwright
 
 from tearsheet.login import LoginCancelledError, LoginTimeoutError, login, wait_for_session
