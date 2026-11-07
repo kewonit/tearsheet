@@ -226,6 +226,18 @@ def test_an_anonymous_session_has_no_paid_features(cache, tmp_path):
     assert (entitlements.revenue_mix_history, entitlements.market_share_history) == (False, False)
 
 
+def test_sector_weights_add_up_to_one_hundred_percent(tmp_path):
+    from tearsheet.sources.tijori.markets import load_constituents, parse_markets
+
+    async def work(client):
+        tables = parse_markets((await client.get("/in/markets")).text)
+        sector = tables["sectors"].rows[0]
+        return await load_constituents(client, "sectors", sector.market_id)
+
+    weights = [c.weight_percent for c in run(work, tmp_path)]
+    assert sum(weights) == pytest.approx(100, abs=1)
+
+
 def test_every_catalogue_field_is_accepted_by_the_query_check(cache, tmp_path):
     from tearsheet.sources.tijori.catalogue import check_query, load_catalogue
 
