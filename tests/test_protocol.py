@@ -93,6 +93,7 @@ def test_tool_list_is_stable_cacheable_and_read_only(server):
         "get_business_mix",
         "search_screen_fields",
         "screen_stocks",
+        "compare_companies",
         "get_sector_view",
         "server_status",
     ]
