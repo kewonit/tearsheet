@@ -10,8 +10,9 @@ confident wrong numbers:
 - A row can have fewer values than there are periods.
 - Periods before a company had subsidiaries are blank in consolidated tables.
 - The trailing twelve months can lag the latest quarterly results.
-- A figure missing from a recent quarter can be stored as 0, beside rows that
-  prove it isn't.
+- A figure can be 0 beside rows that prove it isn't. This comes from companies'
+  own filings: some file profit attributable to owners as 0 when they have no
+  minority holders, and Tijori copies it.
 """
 
 import calendar

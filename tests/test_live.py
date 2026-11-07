@@ -263,3 +263,23 @@ def test_every_catalogue_field_is_accepted_by_the_query_check(cache, tmp_path):
     fields = run(work, tmp_path)
     for field in fields:
         check_query(f"{field.name} > 0", fields)
+
+
+def test_revenue_in_every_local_filing_matches_tijori(cache, tmp_path):
+    """Uses whatever XBRL filings the user has added. Skips when there are none."""
+    from tearsheet.core import paths
+    from tearsheet.sources.filings.files import list_filings
+    from tearsheet.sources.filings.library import parsed_xbrl
+    from tearsheet.tools.filings import check_quarter
+
+    filings = [f for p in list_filings(paths.filings_dir()) if (f := parsed_xbrl(p)) and f.symbol]
+    if not filings:
+        pytest.skip("No XBRL filings in the filings folder.")
+    for filing in filings:
+        tables = tables_for(filing.symbol, cache, tmp_path)
+        statement = build_statement(tables, statement="quarterly", basis=filing.basis, periods=12)
+        label = filing.period_end.strftime("%b %Y")
+        result, status = check_quarter(
+            statement.statement, "revenue", label, filing.symbol, filing.scrip_code
+        )
+        assert status == "matched", (filing.symbol, label, result)

@@ -37,18 +37,25 @@ def page_texts(path: Path, first: int, last: int) -> list[tuple[int, str]]:
 
 
 def search_pdf(path: Path, query: str, limit: int) -> list[tuple[int, str]]:
-    """Pages containing the query, with a short snippet around the first hit."""
+    """Pages containing every word of the query, exact-phrase pages first.
+
+    Reports rarely use a question's exact wording, so a page counts when it has
+    all the words, such as "reactor" and "capacity" in different sentences.
+    """
     reader = _reader(path)
-    wanted = query.lower()
-    hits = []
+    phrase = " ".join(query.lower().split())
+    words = phrase.split()
+    exact, partial = [], []
     for index, page in enumerate(reader.pages[:MAX_PAGES_SCANNED]):
         try:
             text = " ".join((page.extract_text() or "").split())
         except Exception:
             continue
-        at = text.lower().find(wanted)
-        if at >= 0:
-            hits.append((index + 1, text[max(0, at - 120) : at + len(query) + 180]))
-            if len(hits) >= limit:
-                break
-    return hits
+        lowered = text.lower()
+        if not all(word in lowered for word in words):
+            continue
+        at = lowered.find(phrase)
+        bucket = exact if at >= 0 else partial
+        at = at if at >= 0 else lowered.find(words[0])
+        bucket.append((index + 1, text[max(0, at - 120) : at + len(phrase) + 180]))
+    return (exact + partial)[:limit]

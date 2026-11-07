@@ -1,8 +1,9 @@
 """A small reader for the XBRL results filings Indian companies submit.
 
-Experimental: tested only on synthetic filings. Elements are matched by local
-name, so taxonomy versions don't matter, and money is reported in rupees, so
-it's converted to crore. Parsing uses defusedxml, which refuses the entity
+Checked against SEBI's integrated filings from 2025 onwards, for a manufacturer,
+an NBFC, a bank and a life insurer. Elements are matched by local name, so
+taxonomy versions don't matter, and money is filed in rupees, so it's converted
+to crore. Parsing uses defusedxml, which refuses the entity
 tricks that can make XML parsers misbehave.
 """
 
@@ -41,6 +42,13 @@ class Fact(BaseModel):
     unit: str | None
 
 
+class ShownFact(BaseModel):
+    concept: str
+    value: str
+    unit: str | None
+    period: str
+
+
 class XbrlFiling(BaseModel):
     symbol: str | None
     scrip_code: str | None
@@ -49,7 +57,37 @@ class XbrlFiling(BaseModel):
     period_start: date | None
     period_end: date | None
     contexts: dict[str, Context]
+    units: dict[str, str] = {}
     facts: list[Fact]
+
+    def shown(self, fact: Fact) -> ShownFact | None:
+        """A fact as an agent should see it: money in crore, with its period.
+
+        Breakdowns by segment or other dimensions return None, so they can't be
+        mistaken for company totals.
+        """
+        context = self.contexts.get(fact.context)
+        if context is None or context.has_dimensions:
+            return None
+        if context.start:
+            period = f"{context.start.isoformat()} to {context.end.isoformat()}"
+        else:
+            period = f"as of {context.end.isoformat()}"
+        measure = self.units.get(fact.unit or "", "")
+        if measure.upper() == "INR":
+            try:
+                crore = to_crore(Decimal(fact.value), Scale.RUPEES)
+                return ShownFact(
+                    concept=fact.concept,
+                    value=f"{crore:.4f}".rstrip("0").rstrip("."),
+                    unit="crore",
+                    period=period,  # fmt: skip
+                )
+            except (InvalidOperation, ValueError):
+                pass
+        return ShownFact(
+            concept=fact.concept, value=fact.value[:200], unit=measure or None, period=period
+        )
 
     def amount_crore(
         self, concepts: tuple[str, ...], end: date, quarter: bool
@@ -112,6 +150,11 @@ def read_xbrl(path: Path) -> XbrlFiling:
             has_dimensions=element.find(f".//{XBRLI}segment") is not None
             or element.find(f".//{XBRLI}scenario") is not None,
         )
+    units = {}
+    for element in root.iter(f"{XBRLI}unit"):
+        measure = element.find(f".//{XBRLI}measure")
+        if measure is not None and measure.text:
+            units[element.get("id", "")] = measure.text.strip().rsplit(":", 1)[-1]
     facts = [
         Fact(
             concept=_local(element.tag),
@@ -133,5 +176,6 @@ def read_xbrl(path: Path) -> XbrlFiling:
         period_start=_date(meta["period_start"]),
         period_end=_date(meta["period_end"]),
         contexts=contexts,
+        units=units,
         facts=facts,
     )

@@ -33,6 +33,7 @@ def xbrl(
     revenue_rupees="1234500000",
     profit_rupees="150000000",
     owners_rupees="140000000",
+    pbt_rupees="not a number",
 ):
     facts = [
         ("Symbol", "I", symbol),
@@ -45,19 +46,23 @@ def xbrl(
         ("RevenueFromOperations", "S", "1"),
         ("ProfitLossForPeriod", "Q", profit_rupees),
         ("ProfitOrLossAttributableToOwnersOfParent", "Q", owners_rupees),
-        ("ProfitBeforeTax", "Q", "not a number"),
+        ("ProfitBeforeTax", "Q", pbt_rupees),
     ]
-    body = "".join(
-        f'<fin:{name} contextRef="{ctx}" unitRef="INR" decimals="-5">{value}</fin:{name}>'
-        for name, ctx, value in facts
-    )
+
+    def element(name, ctx, value):
+        # Only amounts carry a unit, as in real filings.
+        unit = ' unitRef="INR" decimals="-5"' if ctx != "I" else ""
+        return f'<fin:{name} contextRef="{ctx}"{unit}>{value}</fin:{name}>'
+
+    body = "".join(element(name, ctx, value) for name, ctx, value in facts)
     contexts = (
         context("I")
         + context("Q", start="2026-07-01")
         + context("H", start="2026-04-01")
         + context("S", start="2026-07-01", segment=True)
     )
-    return f'<?xml version="1.0"?><xbrli:xbrl {NS}>{contexts}{body}</xbrli:xbrl>'
+    unit = '<xbrli:unit id="INR"><xbrli:measure>iso4217:INR</xbrli:measure></xbrli:unit>'
+    return f'<?xml version="1.0"?><xbrli:xbrl {NS}>{contexts}{unit}{body}</xbrli:xbrl>'
 
 
 def pdf(pages):

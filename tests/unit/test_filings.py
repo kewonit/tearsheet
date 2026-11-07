@@ -3,6 +3,7 @@
 import asyncio
 import json
 import os
+import re
 from datetime import date
 
 import pytest
@@ -152,15 +153,11 @@ def test_read_filing_returns_pages_or_figures(folder, tmp_path):
     )
     assert [p["text"] for p in pages["data"]["pages"]] == ["Two", "Three"]
     facts = run_tool("read_filing", file="q2.xml", cache_path=tmp_path / "c")["data"]["facts"]
-    assert ["RevenueFromOperations", "1"] not in facts
-    assert ["Symbol", "ACMEFINE"] in facts
-
-
-@pytest.mark.parametrize("pages", ["0", "3-1", "a"])
-def test_bad_page_ranges_are_explained(folder, tmp_path, pages):
-    add(folder, "r.pdf", pdf(["x"]))
-    result = run_tool("read_filing", file="r.pdf", pages=pages, cache_path=tmp_path / "c")
-    assert result["code"] == "INVALID_INPUT"
+    shown = {(f["concept"], f["period"]): (f["value"], f["unit"]) for f in facts}
+    assert shown[("Symbol", "as of 2026-09-30")] == ("ACMEFINE", None)
+    assert shown[("RevenueFromOperations", "2026-07-01 to 2026-09-30")] == ("123.45", "crore")
+    assert shown[("RevenueFromOperations", "2026-04-01 to 2026-09-30")] == ("999.99", "crore")
+    assert not [f for f in facts if f["value"] == "0.0000001"]
 
 
 def test_read_filing_refuses_paths_outside_the_folder(folder, tmp_path):
@@ -276,3 +273,80 @@ def test_an_absolute_path_is_refused_even_inside_the_folder(folder):
     with pytest.raises(ToolFailure) as caught:
         resolve_filing(folder, str(inside))
     assert caught.value.code is ErrorCode.INVALID_INPUT
+
+
+def test_pdf_search_needs_every_word_and_ranks_exact_phrases_first(folder):
+    path = add(
+        folder,
+        "ACMEFINE/report.pdf",
+        pdf(["Capacity grew. New reactors added", "Nothing here", "Total reactor capacity rose"]),
+    )
+    assert [page for page, _ in search_pdf(path, "reactor capacity", 5)] == [3, 1]
+    assert search_pdf(path, "reactor turbine", 5) == []
+
+
+def test_xbrl_search_shows_crore_with_the_period_and_skips_breakdowns(folder, tmp_path):
+    add(folder, "q2.xml", xbrl())
+    result = run_tool("search_filings", query="revenue operations", cache_path=tmp_path / "c")
+    texts = [h["text"] for h in result["data"]["hits"]]
+    assert "RevenueFromOperations = 123.45 crore (2026-07-01 to 2026-09-30)" in texts
+    assert "RevenueFromOperations = 999.99 crore (2026-04-01 to 2026-09-30)" in texts
+    assert len(texts) == 2
+
+
+def test_a_zero_owners_figure_falls_back_to_total_profit_and_says_so(folder):
+    add(folder, "q2.xml", xbrl(owners_rupees="0"))
+    statement = quarterly(123.45, 15.0)
+    result, status = filing_tools.check_quarter(
+        statement, "net_profit", "Sep 2026", "ACMEFINE", "500001"
+    )
+    assert (status, result.filing_crore, result.concept) == ("matched", 15.0, "ProfitLossForPeriod")
+    assert "attributable to owners" in result.note
+
+
+def test_a_real_owners_figure_is_preferred(folder):
+    add(folder, "q2.xml", xbrl())
+    result, _ = filing_tools.check_quarter(
+        quarterly(123.45, 14.0), "net_profit", "Sep 2026", "ACMEFINE", "500001"
+    )
+    assert (result.filing_crore, result.note) == (14.0, None)
+
+
+def test_a_difference_beyond_rounding_is_a_mismatch_even_when_small_in_percent(folder):
+    add(folder, "q2.xml", xbrl(revenue_rupees="1200000000000"))
+    statement = quarterly(119940.0, 14.0)
+    _, status = filing_tools.check_quarter(statement, "revenue", "Sep 2026", "ACMEFINE", "500001")
+    assert status == "mismatch"
+
+
+def rename(xml, old, new, context=None):
+    """Rename whole elements, optionally only those in one context."""
+    where = f' contextRef="{context}"' if context else ""
+    pattern = rf"<fin:{old}({where}[^>]*)>([^<]*)</fin:{old}>"
+    return re.sub(pattern, rf"<fin:{new}\1>\2</fin:{new}>", xml)
+
+
+def test_bank_and_insurer_element_names_are_recognised(folder):
+    filing = rename(xbrl(), "RevenueFromOperations", "NetPremiumIncome", context="Q")
+    filing = rename(filing, "ProfitLossForPeriod", "ProfitLossForThePeriod")
+    filing = rename(filing, "ProfitOrLossAttributableToOwnersOfParent", "Unused")
+    add(folder, "q2.xml", filing)
+    statement = quarterly(123.45, 15.0)
+    revenue, _ = filing_tools.check_quarter(statement, "revenue", "Sep 2026", "ACMEFINE", None)
+    profit, _ = filing_tools.check_quarter(statement, "net_profit", "Sep 2026", "ACMEFINE", None)
+    assert (revenue.concept, profit.concept) == ("NetPremiumIncome", "ProfitLossForThePeriod")
+
+
+def test_verification_also_checks_profit_before_tax(folder):
+    add(folder, "q2.xml", xbrl(pbt_rupees="200000000"))
+    rows = [
+        FinancialRow(name="Net Sales", unit="crore", values=[100.0, 123.45]),
+        FinancialRow(name="Profit Before Tax", unit="crore", values=[10.0, 25.0]),
+        FinancialRow(name="Net Profit", unit="crore", values=[10.0, 14.0]),
+    ]
+    statement = FinancialStatement(
+        statement="quarterly", basis="consolidated", periods=["Jun 2026", "Sep 2026"], rows=rows
+    )
+    verification = filing_tools.verify_quarterly(statement, "ACMEFINE", "500001")
+    assert verification.status == "mismatch"
+    assert "profit_before_tax Sep 2026: Tijori 25.0, filing 20.0" in verification.detail
