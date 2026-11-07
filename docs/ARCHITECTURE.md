@@ -78,7 +78,7 @@ Tested on 8 November 2026 with a signed-in paid account. [tijori-finance-mcp](ht
 
 **Requests have to come from a browser.** A plain HTTP client gets a 403, while an ordinary headless browser that identifies itself honestly is served normally. Tearsheet will keep one headless browser open and make requests from inside a page.
 
-**Pages don't need rendering.** Company and shareholding pages carry their data in the HTML, and the financials page embeds its statements as JSON in a script tag. Parsing what comes back avoids loading pages and clicking tabs, which keeps each call fast. The IDs that operating metrics and fund flow need are in the company page too.
+**Nothing tested needs rendering.** Company, shareholding, raw material, macro and market pages carry their data in the HTML, and the financials page embeds its statements as JSON in a script tag. The popular screens page is the exception, as JavaScript builds it, but it gets its data from a JSON endpoint that can be called directly. Parsing what comes back avoids loading pages and clicking tabs, which keeps each call fast. The IDs that operating metrics, fund flow and revenue history need are in the company page.
 
 **Don't trust `Content-Type`.** Company search returns valid JSON labelled `text/html`, so responses are judged by their body.
 
@@ -91,7 +91,8 @@ Tested on 8 November 2026 with a signed-in paid account. [tijori-finance-mcp](ht
 **Other details:**
 
 - Searching the screener's fields with a query only covers financials, so fetch the full catalogue once and search it locally.
-- Screener result keys can contain HTML, and preset links can contain raw newlines and `%` signs.
+- Screener result keys can contain HTML. Preset links on the page contain raw newlines and `%` signs, so read presets from the JSON endpoint instead, where the business filter is called `alt_query`.
+- The markets page has separate tables for headline indices, sectors and conglomerates, and sectors and conglomerates each have their own constituents endpoint. Using the wrong one returns an empty list rather than an error.
 - Company search also returns `brands` and `InActive` entries, which need filtering out or handling.
 - Operating metrics responses include peer data alongside the company's own series, which `compare_companies` can use.
 - Pages poll for live prices, so waiting for the network to go idle never finishes.
