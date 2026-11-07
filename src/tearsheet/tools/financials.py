@@ -81,8 +81,10 @@ def register(server: MCPServer, *, client: TijoriClient, cache: Cache, read_only
         months, and one starting Interim covers an unstated period, so don't
         compare either directly with annual columns. A blank value means no
         reliable figure exists. If the requested basis doesn't exist, the other
-        is returned with a warning. Set detail to full for line items. Figures
-        are as Tijori reports them and are unchecked against filings.
+        is returned with a warning. Set detail to full for line items. Quarterly
+        figures are checked against any matching filing in the filings folder,
+        and the verification field says how that went. Other statements are
+        Tijori's figures, unchecked.
         """
         match = await find_one(client, cache, company)
         if statement == "fund_flow":

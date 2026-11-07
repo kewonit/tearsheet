@@ -298,7 +298,8 @@ def register(server: MCPServer, *, client: TijoriClient, cache: Cache, read_only
         Returns the latest revenue split by product, geography, segment or
         other breakdowns Tijori tracks, each in percent, plus market share
         figures. Every market share has its own as-of date, and some are years
-        old, so always check it. History needs a paid Tijori plan.
+        old, so always check it. History of the revenue split and of market
+        shares needs a paid Tijori plan.
         """
         match = await find_one(client, cache, company)
         data, fetched_at = await load_company(client, cache, match.company.slug)
